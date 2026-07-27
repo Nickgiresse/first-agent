@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/firstagent_onboarding
+    username: postgres
+    password: postgre
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate      # Flyway gère le schéma, Hibernate ne fait que valider
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false        # bonne pratique : évite les problèmes de lazy-loading hors contexte
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  mail:
+    host: smtp.resend.com
+    port: 587
+    username: resend
+    password: ${RESEND_API_KEY}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  storage:
+    upload-dir: ./uploads
+  mail:
+    from-address: onboarding@resend.dev
+  jwt:
+    secret: ${JWT_SECRET}
