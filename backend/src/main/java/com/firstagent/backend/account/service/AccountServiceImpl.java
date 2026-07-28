@@ -7,7 +7,7 @@ import com.firstagent.backend.account.repository.BankAccountRepository;
 import com.firstagent.backend.common.enums.OnboardingStatus;
 import com.firstagent.backend.common.exception.AccountNotFoundException;
 import com.firstagent.backend.common.exception.BusinessException;
-import com.firstagent.backend.common.security.TokenProvider;
+import com.firstagent.backend.common.security.SecureSessionTokenGenerator;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,22 +25,19 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankAccountRepository bankAccountRepository;
     private final OnboardingSessionRepository onboardingSessionRepository;
-    private final TokenProvider tokenProvider;
+    private final SecureSessionTokenGenerator sessionTokenGenerator;
 
     @Override
     @Transactional
     public AccountVerificationResponse verifyAccount(AccountVerificationRequest request) {
-        BankAccount bankAccount = bankAccountRepository.findByAccountNumber(request.getAccountNumber())
+        BankAccount bankAccount = bankAccountRepository.findByAccountNumber("10005" + request.getAccountSuffix())
             .orElseThrow(() -> new AccountNotFoundException("Aucun compte bancaire trouvé avec ce numéro"));
 
         if (!bankAccount.isEligible()) {
             throw new BusinessException("Ce compte n'est pas éligible à l'onboarding digital", HttpStatus.FORBIDDEN);
         }
 
-        String sessionToken = tokenProvider.generateToken(
-            Map.of("bankAccountId", bankAccount.getId().toString()),
-            SESSION_DURATION_MILLIS
-        );
+        String sessionToken = sessionTokenGenerator.generate();
 
         OnboardingSession session = OnboardingSession.builder()
             .sessionToken(sessionToken)
@@ -54,7 +50,8 @@ public class AccountServiceImpl implements AccountService {
 
         return AccountVerificationResponse.builder()
             .eligible(true)
-            .ownerFullName(bankAccount.getOwnerFullName())
+            .firstName(bankAccount.getFirstName())
+            .lastName(bankAccount.getLastName())
             .sessionToken(sessionToken)
             .expiresInSeconds(SESSION_DURATION_MILLIS / 1000)
             .build();

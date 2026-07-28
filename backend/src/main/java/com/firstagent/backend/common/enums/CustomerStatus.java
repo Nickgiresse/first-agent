@@ -1,7 +1,7 @@
 package com.firstagent.backend.common.enums;
 
 public enum CustomerStatus {
-    ACTIVE,
+    USER,
     BLOCKED,
     SUSPENDED
 }

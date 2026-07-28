@@ -19,7 +19,7 @@ public class SwaggerConfig {
         return new OpenAPI()
             .info(new Info()
                 .title("FirstAgent - API Onboarding Bancaire")
-                .description("API REST pour le parcours d'onboarding digital bancaire (KYC, PIN, documents, authentification)")
+                .description("API REST pour l'onboarding bancaire sans connexion. Le compte commence par 10005 et l'API reçoit les 18 chiffres restants.")
                 .version("v1.0")
                 .contact(new Contact()
                     .name("Équipe FirstAgent")
