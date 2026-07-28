@@ -14,6 +14,7 @@ import com.firstagent.backend.pin.service.PinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 
@@ -50,14 +51,23 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new InvalidPinException("Le PIN et sa confirmation ne correspondent pas");
         }
 
+        if (customerRepository.findByBankAccount_AccountNumber(session.getBankAccount().getAccountNumber()).isPresent()) {
+            throw new BusinessException("Un utilisateur existe déjà pour ce numéro de compte. Utilisez la réinitialisation de PIN si nécessaire.", HttpStatus.CONFLICT);
+        }
+
+        if (kycRequest.getEmail() != null && customerRepository.existsByEmail(kycRequest.getEmail())) {
+            throw new BusinessException("Cette adresse e-mail est déjà utilisée par un autre utilisateur.", HttpStatus.CONFLICT);
+        }
+
         Customer customer = Customer.builder()
             .bankAccount(session.getBankAccount())
             .onboardingSession(session)
-            .firstName(kycRequest.getFirstName())
-            .lastName(kycRequest.getLastName())
+            .firstName(session.getBankAccount().getFirstName())
+            .lastName(session.getBankAccount().getLastName())
             .email(kycRequest.getEmail())
+            .phoneNumber(null)
             .pinHash(pinService.hashPin(pinRequest.getPin()))
-            .status(CustomerStatus.ACTIVE)
+            .status(CustomerStatus.USER)
             .termsAccepted(false)
             .build();
 

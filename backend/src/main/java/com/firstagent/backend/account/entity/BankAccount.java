@@ -26,6 +26,12 @@ public class BankAccount {
     @Column(name = "owner_full_name", length = 150, nullable = false)
     private String ownerFullName;
 
+    @Column(name = "first_name", length = 100, nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100, nullable = false)
+    private String lastName;
+
     @Column(name = "is_eligible", nullable = false)
     private boolean eligible;
 

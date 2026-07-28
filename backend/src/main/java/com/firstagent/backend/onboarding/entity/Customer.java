@@ -67,7 +67,7 @@ public class Customer {
         this.createdAt = now;
         this.updatedAt = now;
         if (this.status == null) {
-            this.status = CustomerStatus.ACTIVE;
+            this.status = CustomerStatus.USER;
         }
     }
 

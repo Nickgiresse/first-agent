@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 public class AccountVerificationResponse {
 
     private boolean eligible;
-    private String ownerFullName;
+    private String firstName;
+    private String lastName;
     private String sessionToken;
     private long expiresInSeconds;
 }
