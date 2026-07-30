@@ -51,6 +51,12 @@ public class Customer {
     @Column(name = "terms_accepted_at")
     private LocalDateTime termsAcceptedAt;
 
+    @Column(name = "requires_manual_review", nullable = false)
+    private boolean requiresManualReview;
+
+    @Column(name = "manual_review_reason")
+    private String manualReviewReason;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private CustomerStatus status;

@@ -47,3 +47,17 @@ app:
     from-address: onboarding@resend.dev
   jwt:
     secret: ${JWT_SECRET}
+  # Microservice Python de vision (OCR, visage, vivacité, comparaison biométrique) — remplace
+  # Mindee/AWS/CompreFace. Point d'entrée unique, jamais appelé directement par Angular.
+  vision-service:
+    base-url: ${VISION_SERVICE_URL:http://localhost:8001}
+    api-key: ${VISION_SERVICE_API_KEY:changeme-local-dev-key}
+  ocr:
+    min-confidence-score: 60
+    name-similarity-threshold: 0.75
+  identity:
+    name-similarity-threshold: 0.70
+  quality:
+    # En dessous de ce score (document OU selfie), le dossier n'est pas rejeté mais enregistré
+    # avec un statut "à réviser manuellement" pour finalisation par l'agence.
+    manual-review-threshold: 70

@@ -36,6 +36,18 @@ public class OnboardingSession {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Column(name = "email", length = 150)
+    private String email;
+
+    @Column(name = "pin_hash")
+    private String pinHash;
+
+    @Column(name = "terms_accepted", nullable = false)
+    private boolean termsAccepted;
+
+    @Column(name = "terms_accepted_at")
+    private LocalDateTime termsAcceptedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

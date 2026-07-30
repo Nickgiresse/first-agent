@@ -1,0 +1,42 @@
+INFO:     Started server process [38700]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54858 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57112 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55106 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1785368954.433862   40684 inference_feedback_manager.cc:121] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+INFO:     127.0.0.1:63521 - "POST /api/v1/document/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59852 - "POST /api/v1/document/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52134 - "POST /api/v1/document/analyze HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:61614 - "POST /api/v1/document/analyze HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56993 - "POST /api/v1/document/analyze HTTP/1.1" 200 OK
+E0000 00:00:1785369254.929690   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+INFO:     127.0.0.1:62182 - "POST /api/v1/document/extract HTTP/1.1" 200 OK
+E0000 00:00:1785369314.935021   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+E0000 00:00:1785369374.939371   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+INFO:     127.0.0.1:53777 - "POST /api/v1/document/extract HTTP/1.1" 422 Unprocessable Content
+E0000 00:00:1785369434.949116   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+INFO:     127.0.0.1:59852 - "POST /api/v1/document/extract HTTP/1.1" 200 OK
+E0000 00:00:1785369494.956381   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+E0000 00:00:1785369554.962798   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+E0000 00:00:1785369614.969109   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
+E0000 00:00:1785369674.975244   25576 portable_clearcut_uploader.cc:90] Failed to send to clearcut: FAILED_PRECONDITION: Not valid for uploading until: 2026-07-30T00:05:14.898904+00:00
+=== Source Location Trace: === 
+wireless/android/play/playlog/cplusplus/portable_clearcut_uploader.cc:180
