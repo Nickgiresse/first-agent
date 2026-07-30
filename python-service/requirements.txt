@@ -1,0 +1,25 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+pydantic==2.13.4
+pydantic-settings==2.7.0
+numpy==2.5.1
+
+# mediapipe impose opencv-contrib-python (pas headless) comme dépendance obligatoire ;
+# ne PAS ajouter opencv-python/opencv-python-headless en plus, ça créerait un conflit
+# (les trois variantes s'installent sous le même module `cv2`).
+mediapipe==0.10.35
+
+# OCR : wrapper Python pur pour le binaire Tesseract (installé séparément au niveau système,
+# voir README). Choisi pour le Module 2 car PaddleOCR (paddlepaddle) n'a pas encore de wheel
+# Python 3.14 et EasyOCR duplique opencv-contrib-python (cf. mémo mediapipe ci-dessus).
+pytesseract==0.3.13
+Pillow==12.3.0
+
+# Module 5 : inférence ArcFace (empreinte faciale) en ONNX Runtime pur, sans le paquet pip
+# `insightface` (celui-ci impose opencv-python standard, en conflit avec opencv-contrib-python
+# de mediapipe — même piège que EasyOCR). Modèle w600k_r50.onnx téléchargé séparément (voir README).
+onnxruntime==1.28.0
+
+pytest==8.3.4
+httpx==0.28.1

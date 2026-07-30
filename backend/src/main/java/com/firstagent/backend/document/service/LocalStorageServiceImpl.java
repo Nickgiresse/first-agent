@@ -2,6 +2,7 @@ package com.firstagent.backend.document.service;
 
 import com.firstagent.backend.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LocalStorageServiceImpl implements StorageService {
@@ -34,6 +36,24 @@ public class LocalStorageServiceImpl implements StorageService {
             return targetPath.toString();
         } catch (IOException e) {
             throw new BusinessException("Erreur lors de l'enregistrement du fichier");
+        }
+    }
+
+    @Override
+    public byte[] read(String filePath) {
+        try {
+            return Files.readAllBytes(Paths.get(filePath));
+        } catch (IOException e) {
+            throw new BusinessException("Erreur lors de la lecture du fichier");
+        }
+    }
+
+    @Override
+    public void delete(String filePath) {
+        try {
+            Files.deleteIfExists(Paths.get(filePath));
+        } catch (IOException e) {
+            log.warn("Impossible de supprimer l'ancien fichier {}", filePath, e);
         }
     }
 

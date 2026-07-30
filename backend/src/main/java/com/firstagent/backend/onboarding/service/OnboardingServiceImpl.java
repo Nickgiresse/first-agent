@@ -1,31 +1,76 @@
 package com.firstagent.backend.onboarding.service;
 
 import com.firstagent.backend.common.enums.CustomerStatus;
+import com.firstagent.backend.common.enums.FaceVerificationStatus;
+import com.firstagent.backend.common.enums.LivenessStatus;
+import com.firstagent.backend.common.enums.OcrStatus;
 import com.firstagent.backend.common.enums.OnboardingStatus;
 import com.firstagent.backend.common.exception.BusinessException;
 import com.firstagent.backend.common.exception.InvalidPinException;
-import com.firstagent.backend.common.exception.ResourceNotFoundException;
+import com.firstagent.backend.document.entity.CustomerDocument;
+import com.firstagent.backend.document.entity.DocumentOcrResult;
+import com.firstagent.backend.document.entity.FaceVerificationResult;
+import com.firstagent.backend.document.entity.StagingDocument;
+import com.firstagent.backend.document.entity.StagingFaceVerificationResult;
+import com.firstagent.backend.document.entity.StagingOcrResult;
+import com.firstagent.backend.document.repository.DocumentOcrResultRepository;
+import com.firstagent.backend.document.repository.DocumentRepository;
+import com.firstagent.backend.document.repository.FaceVerificationResultRepository;
+import com.firstagent.backend.document.repository.StagingDocumentRepository;
+import com.firstagent.backend.document.repository.StagingFaceVerificationResultRepository;
+import com.firstagent.backend.document.repository.StagingOcrResultRepository;
 import com.firstagent.backend.document.service.DocumentService;
+import com.firstagent.backend.document.service.FaceVerificationService;
+import com.firstagent.backend.document.service.OcrService;
+import com.firstagent.backend.liveness.entity.LivenessResult;
+import com.firstagent.backend.liveness.entity.StagingLivenessResult;
+import com.firstagent.backend.liveness.repository.LivenessResultRepository;
+import com.firstagent.backend.liveness.repository.StagingLivenessResultRepository;
+import com.firstagent.backend.liveness.service.LivenessService;
 import com.firstagent.backend.onboarding.dto.*;
 import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.CustomerRepository;
 import com.firstagent.backend.pin.service.PinService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class OnboardingServiceImpl implements OnboardingService {
 
+    private static final int REQUIRED_DOCUMENT_COUNT = 3;
+
+    // En dessous de ce score qualité (document OU selfie), le dossier n'est pas rejeté : il est
+    // enregistré jusqu'au bout mais marqué pour révision manuelle par l'agence.
+    @Value("${app.quality.manual-review-threshold:70}")
+    private double manualReviewThreshold;
+
     private final OnboardingSessionService onboardingSessionService;
     private final CustomerRepository customerRepository;
     private final PinService pinService;
     private final DocumentService documentService;
+    private final OcrService ocrService;
+    private final FaceVerificationService faceVerificationService;
+    private final LivenessService livenessService;
+
+    private final StagingDocumentRepository stagingDocumentRepository;
+    private final StagingOcrResultRepository stagingOcrResultRepository;
+    private final StagingFaceVerificationResultRepository stagingFaceVerificationResultRepository;
+    private final StagingLivenessResultRepository stagingLivenessResultRepository;
+
+    private final DocumentRepository documentRepository;
+    private final DocumentOcrResultRepository documentOcrResultRepository;
+    private final FaceVerificationResultRepository faceVerificationResultRepository;
+    private final LivenessResultRepository livenessResultRepository;
 
     @Override
     public void validateKyc(String sessionToken, KycRequest request) {
@@ -40,7 +85,7 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     @Override
     @Transactional
-    public Customer createProfile(String sessionToken, KycRequest kycRequest, PinCreationRequest pinRequest) {
+    public void createProfile(String sessionToken, KycRequest kycRequest, PinCreationRequest pinRequest) {
         OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
 
         if (session.getStatus() != OnboardingStatus.KYC_COMPLETED) {
@@ -59,22 +104,9 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new BusinessException("Cette adresse e-mail est déjà utilisée par un autre utilisateur.", HttpStatus.CONFLICT);
         }
 
-        Customer customer = Customer.builder()
-            .bankAccount(session.getBankAccount())
-            .onboardingSession(session)
-            .firstName(session.getBankAccount().getFirstName())
-            .lastName(session.getBankAccount().getLastName())
-            .email(kycRequest.getEmail())
-            .phoneNumber(null)
-            .pinHash(pinService.hashPin(pinRequest.getPin()))
-            .status(CustomerStatus.USER)
-            .termsAccepted(false)
-            .build();
-
-        customerRepository.save(customer);
+        session.setEmail(kycRequest.getEmail());
+        session.setPinHash(pinService.hashPin(pinRequest.getPin()));
         onboardingSessionService.updateStatus(session, OnboardingStatus.PIN_CREATED);
-
-        return customer;
     }
 
     @Override
@@ -82,20 +114,33 @@ public class OnboardingServiceImpl implements OnboardingService {
     public void acceptTerms(String sessionToken, TermsAcceptanceRequest request) {
         OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
 
-        Customer customer = customerRepository.findByOnboardingSession_Id(session.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("Profil client introuvable pour cette session"));
-
-        if (!documentService.hasAllRequiredDocuments(customer.getId())) {
+        if (!documentService.hasAllRequiredDocuments(sessionToken)) {
             throw new BusinessException("Tous les documents requis (CNI recto, verso, selfie) doivent être téléversés avant d'accepter les conditions");
         }
 
-        customer.setTermsAccepted(true);
-        customer.setTermsAcceptedAt(LocalDateTime.now());
-        customerRepository.save(customer);
+        if (!ocrService.isConfirmed(sessionToken)) {
+            throw new BusinessException("Les informations extraites de votre CNI doivent être vérifiées et confirmées avant d'accepter les conditions");
+        }
 
+        if (!livenessService.isLive(sessionToken)) {
+            throw new BusinessException("Le défi de vivacité (clignement, rotation de la tête...) doit être réussi avant d'accepter les conditions");
+        }
+
+        if (!faceVerificationService.isVerified(sessionToken)) {
+            throw new BusinessException("La vérification faciale (selfie vs photo de la CNI) doit être réussie avant d'accepter les conditions");
+        }
+
+        session.setTermsAccepted(true);
+        session.setTermsAcceptedAt(LocalDateTime.now());
         onboardingSessionService.updateStatus(session, OnboardingStatus.TERMS_ACCEPTED);
     }
 
+    /**
+     * Seul point d'écriture des tables définitives (customers, customer_documents,
+     * document_ocr_results, face_verification_results, liveness_results) : tout ce qui précède
+     * n'a écrit que dans les tables de staging, rattachées à la session. Cette méthode matérialise
+     * l'ensemble en une seule transaction, puis purge le staging.
+     */
     @Override
     @Transactional
     public OnboardingCompletionResponse completeOnboarding(String sessionToken) {
@@ -105,16 +150,129 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new BusinessException("Les conditions d'utilisation doivent être acceptées avant la finalisation");
         }
 
-        Customer customer = customerRepository.findByOnboardingSession_Id(session.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("Profil client introuvable pour cette session"));
+        UUID sessionId = session.getId();
+
+        List<StagingDocument> stagingDocuments = stagingDocumentRepository.findByOnboardingSession_Id(sessionId);
+        StagingOcrResult stagingOcr = stagingOcrResultRepository.findByOnboardingSession_Id(sessionId)
+            .orElseThrow(() -> new BusinessException("Les informations extraites de votre CNI doivent être vérifiées et confirmées avant la finalisation"));
+        StagingFaceVerificationResult stagingFace = stagingFaceVerificationResultRepository.findByOnboardingSession_Id(sessionId)
+            .orElseThrow(() -> new BusinessException("La vérification faciale doit être réussie avant la finalisation"));
+        StagingLivenessResult stagingLiveness = stagingLivenessResultRepository.findByOnboardingSession_Id(sessionId)
+            .orElseThrow(() -> new BusinessException("Le défi de vivacité doit être réussi avant la finalisation"));
+
+        if (stagingDocuments.size() < REQUIRED_DOCUMENT_COUNT
+            || stagingOcr.getStatus() != OcrStatus.CONFIRMED
+            || stagingFace.getStatus() != FaceVerificationStatus.VERIFIED
+            || stagingLiveness.getStatus() != LivenessStatus.LIVE) {
+            throw new BusinessException("Le dossier n'est pas complet, impossible de finaliser l'inscription");
+        }
+
+        Customer customer = Customer.builder()
+            .bankAccount(session.getBankAccount())
+            .onboardingSession(session)
+            .firstName(session.getBankAccount().getFirstName())
+            .lastName(session.getBankAccount().getLastName())
+            .email(session.getEmail())
+            .pinHash(session.getPinHash())
+            .status(CustomerStatus.USER)
+            .termsAccepted(true)
+            .termsAcceptedAt(session.getTermsAcceptedAt())
+            .build();
+
+        applyManualReview(customer, stagingOcr.getDocumentQualityScore(), stagingFace.getTargetQualityScore());
+        customerRepository.save(customer);
+
+        for (StagingDocument staged : stagingDocuments) {
+            documentRepository.save(CustomerDocument.builder()
+                .customer(customer)
+                .documentType(staged.getDocumentType())
+                .filePath(staged.getFilePath())
+                .fileName(staged.getFileName())
+                .mimeType(staged.getMimeType())
+                .fileSize(staged.getFileSize())
+                .build());
+        }
+
+        documentOcrResultRepository.save(DocumentOcrResult.builder()
+            .customer(customer)
+            .documentKind(stagingOcr.getDocumentKind())
+            .firstName(stagingOcr.getFirstName())
+            .lastName(stagingOcr.getLastName())
+            .documentNumber(stagingOcr.getDocumentNumber())
+            .sex(stagingOcr.getSex())
+            .birthDate(stagingOcr.getBirthDate())
+            .expiryDate(stagingOcr.getExpiryDate())
+            .birthPlace(stagingOcr.getBirthPlace())
+            .fatherName(stagingOcr.getFatherName())
+            .motherName(stagingOcr.getMotherName())
+            .kitNumber(stagingOcr.getKitNumber())
+            .requestIdentifier(stagingOcr.getRequestIdentifier())
+            .ocrProvider(stagingOcr.getOcrProvider())
+            .confidenceScore(stagingOcr.getConfidenceScore())
+            .documentQualityScore(stagingOcr.getDocumentQualityScore())
+            .status(OcrStatus.CONFIRMED)
+            .extractedAt(stagingOcr.getExtractedAt())
+            .confirmedAt(stagingOcr.getConfirmedAt())
+            .build());
+
+        faceVerificationResultRepository.save(FaceVerificationResult.builder()
+            .customer(customer)
+            .similarityScore(stagingFace.getSimilarityScore())
+            .targetQualityScore(stagingFace.getTargetQualityScore())
+            .provider(stagingFace.getProvider())
+            .status(FaceVerificationStatus.VERIFIED)
+            .verifiedAt(stagingFace.getVerifiedAt())
+            .build());
+
+        livenessResultRepository.save(LivenessResult.builder()
+            .customer(customer)
+            .sessionId(stagingLiveness.getSessionId())
+            .status(LivenessStatus.LIVE)
+            .completedActions(stagingLiveness.getCompletedActions())
+            .totalActions(stagingLiveness.getTotalActions())
+            .verifiedAt(stagingLiveness.getVerifiedAt())
+            .build());
+
+        stagingDocumentRepository.deleteByOnboardingSession_Id(sessionId);
+        stagingOcrResultRepository.deleteByOnboardingSession_Id(sessionId);
+        stagingFaceVerificationResultRepository.deleteByOnboardingSession_Id(sessionId);
+        stagingLivenessResultRepository.deleteByOnboardingSession_Id(sessionId);
 
         onboardingSessionService.updateStatus(session, OnboardingStatus.COMPLETED);
+
+        String message = customer.isRequiresManualReview()
+            ? "Votre compte a été enregistré. La qualité de vos documents nécessite une vérification "
+                + "complémentaire par notre agence avant activation complète."
+            : "Votre compte digital a été créé avec succès. Vous pouvez maintenant vous connecter.";
 
         return OnboardingCompletionResponse.builder()
             .customerId(customer.getId())
             .firstName(customer.getFirstName())
             .lastName(customer.getLastName())
-            .message("Votre compte digital a été créé avec succès. Vous pouvez maintenant vous connecter.")
+            .message(message)
+            .requiresManualReview(customer.isRequiresManualReview())
             .build();
+    }
+
+    /**
+     * Un score de qualité (document ou selfie) sous le seuil ne bloque pas l'inscription : le
+     * dossier est enregistré jusqu'au bout, seulement marqué pour révision manuelle par l'agence
+     * plutôt que rejeté ou approuvé automatiquement.
+     */
+    private void applyManualReview(Customer customer, Double documentQualityScore, Double faceQualityScore) {
+        List<String> reasons = new ArrayList<>();
+
+        if (documentQualityScore != null && documentQualityScore < manualReviewThreshold) {
+            reasons.add("Qualité du document d'identité insuffisante (" + Math.round(documentQualityScore) + "%)");
+        }
+
+        if (faceQualityScore != null && faceQualityScore < manualReviewThreshold) {
+            reasons.add("Qualité du selfie insuffisante (" + Math.round(faceQualityScore) + "%)");
+        }
+
+        if (!reasons.isEmpty()) {
+            customer.setRequiresManualReview(true);
+            customer.setManualReviewReason(String.join(" ; ", reasons));
+        }
     }
 }

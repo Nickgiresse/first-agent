@@ -17,4 +17,5 @@ public class OnboardingCompletionResponse {
     private String firstName;
     private String lastName;
     private String message;
+    private boolean requiresManualReview;
 }
