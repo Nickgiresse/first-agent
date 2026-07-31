@@ -33,8 +33,7 @@
                     inputmode="numeric" autocomplete="off" maxlength="18" placeholder="_____ ___________ __"
                     (input)="onInput($event)" (blur)="touched.set(true)"></div>
             <p class="account-mask" aria-hidden="true">10005 {{ displayValue() }}</p>
-            <span class="field-help">Format complet : 10005
-                _____ ___________ __</span>@if (touched() && !valid()) { <span class="form-error">Veuillez
+            @if (touched() && !valid()) { <span class="form-error">Veuillez
                 saisir exactement 18 chiffres.</span> } @if (error()) { <span class="form-error">{{ error() }}</span>
             }<button class="primary-button" type="button" (click)="submit()"
                 [disabled]="!valid() || submitting()">{{ submitting() ? 'Vérification…' : 'Continuer' }}</button>
