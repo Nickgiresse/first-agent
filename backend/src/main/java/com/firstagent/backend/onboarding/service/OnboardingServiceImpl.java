@@ -266,6 +266,11 @@ public class OnboardingServiceImpl implements OnboardingService {
             .onboardingSession(session)
             .firstName(session.getBankAccount().getFirstName())
             .lastName(session.getBankAccount().getLastName())
+            // Numéro déposé par le bot à l'ouverture du parcours et vérifié
+            // contre le référentiel bancaire. C'est lui qui identifiera le
+            // client sur WhatsApp : le laisser nul rendrait le compte
+            // inutilisable par le bot, qui ne saurait plus à qui il parle.
+            .phoneNumber(session.getPhoneNumber())
             .email(session.getEmail())
             .pinHash(session.getPinHash())
             .status(CustomerStatus.USER)

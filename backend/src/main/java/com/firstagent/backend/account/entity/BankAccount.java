@@ -32,6 +32,17 @@ public class BankAccount {
     @Column(name = "last_name", length = 100, nullable = false)
     private String lastName;
 
+    /**
+     * Numéro de téléphone déclaré sur le compte au référentiel bancaire.
+     *
+     * <p>Sert au contrôle d'appartenance : seul ce numéro peut ouvrir l'accès
+     * au service sur ce compte. Nul lorsque le référentiel ne l'a pas fourni,
+     * auquel cas le contrôle ne peut pas conclure et le dossier part en revue
+     * plutôt que d'être accepté par défaut.
+     */
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
     @Column(name = "is_eligible", nullable = false)
     private boolean eligible;
 

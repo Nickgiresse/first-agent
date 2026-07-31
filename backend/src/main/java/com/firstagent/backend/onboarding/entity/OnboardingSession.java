@@ -36,6 +36,17 @@ public class OnboardingSession {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    /**
+     * Numéro WhatsApp du client qui réalise ce parcours.
+     *
+     * <p>Renseigné par le bot à l'ouverture de la session : il connaît déjà son
+     * interlocuteur. Le numéro n'est ni saisi ni modifiable depuis le
+     * navigateur, sans quoi n'importe qui pourrait s'inscrire au nom d'un
+     * autre. Nul quand le parcours est ouvert directement depuis le web.
+     */
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
     @Column(name = "email", length = 150)
     private String email;
 
