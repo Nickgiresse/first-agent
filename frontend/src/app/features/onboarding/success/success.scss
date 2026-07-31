@@ -1,0 +1,94 @@
+:host {
+    display: block
+}
+
+.success {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: radial-gradient(circle at top, #fff0f2, transparent 38%), #fff
+}
+
+.success section {
+    position: relative;
+    z-index: 10;
+    width: min(100%, 500px);
+    text-align: center
+}
+
+.confetti-layer {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 5
+}
+
+.confetti-piece {
+    position: absolute;
+    top: -14px;
+    width: 8px;
+    height: 14px;
+    border-radius: 2px;
+    opacity: .9;
+    animation-name: confetti-fall;
+    animation-timing-function: ease-in;
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards
+}
+
+@keyframes confetti-fall {
+    from {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1
+    }
+    to {
+        transform: translate(var(--drift), 100vh) rotate(var(--rotation));
+        opacity: 0
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .confetti-layer {
+        display: none
+    }
+}
+
+.success img {
+    width: 120px;
+    height: 90px;
+    object-fit: contain
+}
+
+.check {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    margin: 26px auto;
+    border-radius: 50%;
+    background: #fff0f2;
+    color: var(--color-primary);
+    font-size: 40px;
+    font-weight: 800
+}
+
+.success h1 {
+    font: 800 40px/1.1 var(--font-display);
+    letter-spacing: -.05em;
+    color: var(--color-primary-dark)
+}
+
+.success p {
+    line-height: 1.55;
+    color: var(--color-muted);
+    font-size: 18px
+}
+
+.success a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none
+}

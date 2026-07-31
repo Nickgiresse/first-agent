@@ -62,6 +62,40 @@ def text_image_factory():
 
 
 @pytest.fixture
+def patterned_text_image_factory():
+    """Génère une image de texte imprimé sur un fond dégradé de couleur avec un motif guilloché
+    (fines lignes diagonales répétées) superposé, pour se rapprocher du cas réel qui a motivé le
+    retravail de preprocessing.py : CNI camerounaise avec bandes de couleur (vert/rose/jaune) et
+    fond guilloché derrière le texte."""
+
+    def _make(text: str, width: int = 700, height: int = 220) -> np.ndarray:
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+        # Dégradé horizontal vert -> rose -> jaune pâle, similaire aux bandes de couleur d'une CNI.
+        stops = [(210, 245, 220), (235, 210, 225), (225, 235, 200)]
+        for x in range(width):
+            t = x / max(width - 1, 1)
+            segment = min(int(t * (len(stops) - 1)), len(stops) - 2)
+            local_t = t * (len(stops) - 1) - segment
+            color = tuple(
+                int(stops[segment][c] * (1 - local_t) + stops[segment + 1][c] * local_t) for c in range(3)
+            )
+            image[:, x] = color
+
+        # Motif guilloché : fines lignes diagonales répétées, légèrement plus sombres que le fond.
+        overlay = image.copy()
+        for offset in range(-height, width, 6):
+            cv2.line(overlay, (offset, 0), (offset + height, height), (150, 150, 150), 1, cv2.LINE_AA)
+        image = cv2.addWeighted(overlay, 0.35, image, 0.65, 0)
+
+        cv2.putText(
+            image, text, (20, height // 2 + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.4, (10, 10, 10), 3, cv2.LINE_AA
+        )
+        return image
+
+    return _make
+
+
+@pytest.fixture
 def sample_portrait_bytes() -> bytes:
     """Vraie photo de visage (échantillon public officiel MediaPipe), utilisée pour les tests qui
     ont besoin d'une détection de visage réelle — les images synthétiques ne suffisent pas."""

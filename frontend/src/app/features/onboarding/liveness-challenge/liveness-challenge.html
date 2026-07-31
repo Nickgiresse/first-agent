@@ -1,0 +1,59 @@
+<main class="journey">
+    <aside class="journey-aside">
+        <a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png" alt="">Afriland First Bank</a>
+        <h1>Vérification de vivacité</h1>
+        <p>Nous devons nous assurer qu'une vraie personne se trouve devant la caméra. Suivez les instructions affichées.</p>
+    </aside>
+    <section class="journey-main">
+        <div class="form-shell">
+            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
+            <h2>Preuve de vivacité</h2>
+            <p class="lead">Gardez votre visage bien visible et centré pendant toute la vérification.</p>
+
+            <div class="liveness-viewport">
+                <video #videoRef autoplay playsinline muted></video>
+                <canvas #captureCanvas [width]="480" [height]="480" hidden></canvas>
+
+                @if (phase() === 'READY' || phase() === 'RETRY') {
+                    <div class="liveness-instruction">{{ currentAction() ? actionLabels[currentAction()!] : '' }}</div>
+                }
+                @if (phase() === 'CAPTURING') {
+                    <div class="liveness-instruction pulsing">{{ currentAction() ? actionLabels[currentAction()!] : '' }}</div>
+                }
+            </div>
+
+            @if (actions().length > 0) {
+                <p class="liveness-progress">Étape {{ currentActionIndex() + 1 }} / {{ actions().length }}</p>
+            }
+
+            @switch (phase()) {
+                @case ('LOADING') {
+                    <p>Préparation de la caméra…</p>
+                }
+                @case ('READY') {
+                    <button class="primary-button" type="button" (click)="startCapture()">Commencer</button>
+                }
+                @case ('CAPTURING') {
+                    <p class="liveness-status" aria-live="polite">Capture en cours, ne bougez pas trop vite…</p>
+                }
+                @case ('VERIFYING') {
+                    <p class="liveness-status" aria-live="polite">Vérification…</p>
+                }
+                @case ('RETRY') {
+                    <span class="form-error">{{ error() ?? "Mouvement non détecté, réessayez." }}</span>
+                    <button class="primary-button" type="button" (click)="retryCurrentAction()">Réessayer</button>
+                }
+                @case ('FINALIZING') {
+                    <p>Finalisation de la vérification…</p>
+                }
+                @case ('ERROR') {
+                    <span class="form-error">{{ error() }}</span>
+                }
+            }
+
+            @if (cameraError()) {
+                <span class="form-error">{{ cameraError() }}</span>
+            }
+        </div>
+    </section>
+</main>

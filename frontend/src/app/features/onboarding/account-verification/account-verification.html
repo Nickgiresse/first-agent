@@ -1,0 +1,47 @@
+<main class="journey">
+    <aside class="journey-aside">
+        <a class="brand" href="/onboarding/welcome">
+            <img src="afriland-first-bank-logo.png" alt="Afriland First Bank">
+            Afriland First Bank
+        </a>
+        <h1>
+            Votre accès sécurisé commence ici.
+        </h1>
+        <p>
+            Nous utilisons votre numéro de compte pour retrouver votre identité, sans vous demander de la ressaisir.
+        </p>
+        <nav class="journey-steps">
+            <div class="journey-step active">
+                <i class="step-icon">1</i>
+                <span><b>Identité</b><br>Vérification du compte</span>
+            </div>
+            <div class="journey-step"><i class="step-icon">2</i><span>Code PIN</span></div>
+            <div class="journey-step"><i class="step-icon">3</i><span>Validation</span></div>
+        </nav>
+        <footer class="journey-footer">Mentions légales · Confidentialité</footer>
+    </aside>
+    <section class="journey-main">
+        <div class="form-shell">
+            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
+            <div class="progress-meta"><span>Étape 1 sur 3</span><span>33 % complété</span></div>
+            <div class="progress"><span style="width:33%"></span></div>
+            <h2>Vérifions votre numéro de compte</h2>
+            <p class="lead">Saisissez les 18 derniers chiffres. Le préfixe Afriland First Bank est déjà renseigné.</p>
+            <label class="field-label" for="accountSuffix">Numéro de compte</label>
+            <div class="account-field"><span class="account-prefix">10005</span>
+                <input id="accountSuffix" type="text"
+                    inputmode="numeric" autocomplete="off" maxlength="18" placeholder="_____ ___________ __"
+                    (input)="onInput($event)" (blur)="touched.set(true)"></div>
+            <p class="account-mask" aria-hidden="true">10005 {{ displayValue() }}</p>
+            <span class="field-help">Format complet : 10005
+                _____ ___________ __</span>@if (touched() && !valid()) { <span class="form-error">Veuillez
+                saisir exactement 18 chiffres.</span> } @if (error()) { <span class="form-error">{{ error() }}</span>
+            }<button class="primary-button" type="button" (click)="submit()"
+                [disabled]="!valid() || submitting()">{{ submitting() ? 'Vérification…' : 'Continuer' }}</button>
+            <hr class="divider">
+            <p class="support">Besoin d’aide ? <a href="mailto:support@afrilandfirstbank.com">Contacter le support</a>
+            </p>
+        </div>
+        <footer class="legal">Politique de cookies · Information sécurité</footer>
+    </section>
+</main>
