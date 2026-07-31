@@ -27,10 +27,13 @@ import com.firstagent.backend.liveness.entity.StagingLivenessResult;
 import com.firstagent.backend.liveness.repository.LivenessResultRepository;
 import com.firstagent.backend.liveness.repository.StagingLivenessResultRepository;
 import com.firstagent.backend.liveness.service.LivenessService;
+import com.firstagent.backend.onboarding.dto.KycRequest;
 import com.firstagent.backend.onboarding.dto.OnboardingCompletionResponse;
+import com.firstagent.backend.onboarding.dto.OtpVerificationRequest;
 import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.CustomerRepository;
+import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
 import com.firstagent.backend.pin.service.PinService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -56,6 +61,8 @@ class OnboardingServiceImplTest {
     @Mock private OnboardingSessionService onboardingSessionService;
     @Mock private CustomerRepository customerRepository;
     @Mock private PinService pinService;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private JavaMailSender mailSender;
     @Mock private DocumentService documentService;
     @Mock private OcrService ocrService;
     @Mock private FaceVerificationService faceVerificationService;
@@ -68,6 +75,7 @@ class OnboardingServiceImplTest {
     @Mock private DocumentOcrResultRepository documentOcrResultRepository;
     @Mock private FaceVerificationResultRepository faceVerificationResultRepository;
     @Mock private LivenessResultRepository livenessResultRepository;
+    @Mock private OnboardingSessionRepository onboardingSessionRepository;
 
     private OnboardingServiceImpl service;
 
@@ -77,12 +85,163 @@ class OnboardingServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new OnboardingServiceImpl(
-            onboardingSessionService, customerRepository, pinService, documentService, ocrService,
+            onboardingSessionService, customerRepository, pinService, passwordEncoder, mailSender, documentService, ocrService,
             faceVerificationService, livenessService,
             stagingDocumentRepository, stagingOcrResultRepository, stagingFaceVerificationResultRepository, stagingLivenessResultRepository,
-            documentRepository, documentOcrResultRepository, faceVerificationResultRepository, livenessResultRepository
+            documentRepository, documentOcrResultRepository, faceVerificationResultRepository, livenessResultRepository,
+            onboardingSessionRepository
         );
         ReflectionTestUtils.setField(service, "manualReviewThreshold", 70.0);
+        ReflectionTestUtils.setField(service, "fromAddress", "onboarding@afrilandfirstbank.com");
+    }
+
+    private OnboardingSession accountVerifiedSession() {
+        BankAccount bankAccount = BankAccount.builder().firstName("Jean").lastName("Nkeng").build();
+        return OnboardingSession.builder()
+            .id(sessionId)
+            .bankAccount(bankAccount)
+            .status(OnboardingStatus.ACCOUNT_VERIFIED)
+            .emailOtpAttempts(0)
+            .build();
+    }
+
+    @Test
+    void requestEmailOtpSendsCodeAndStoresHash() {
+        OnboardingSession session = accountVerifiedSession();
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+        when(customerRepository.existsByEmail("jean@example.com")).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed-code");
+
+        service.requestEmailOtp(sessionToken, kycRequest("jean@example.com"));
+
+        ArgumentCaptor<OnboardingSession> captor = ArgumentCaptor.forClass(OnboardingSession.class);
+        verify(onboardingSessionRepository).save(captor.capture());
+        OnboardingSession saved = captor.getValue();
+        assertThat(saved.getPendingEmail()).isEqualTo("jean@example.com");
+        assertThat(saved.getEmailOtpCodeHash()).isEqualTo("hashed-code");
+        assertThat(saved.getEmailOtpExpiresAt()).isAfter(LocalDateTime.now());
+
+        verify(mailSender).send(any(org.springframework.mail.SimpleMailMessage.class));
+    }
+
+    @Test
+    void requestEmailOtpThrowsWhenEmailAlreadyUsed() {
+        OnboardingSession session = accountVerifiedSession();
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+        when(customerRepository.existsByEmail("jean@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.requestEmailOtp(sessionToken, kycRequest("jean@example.com")))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("déjà utilisée");
+
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void requestEmailOtpThrowsDuringResendCooldown() {
+        OnboardingSession session = accountVerifiedSession();
+        session.setEmailOtpLastSentAt(LocalDateTime.now());
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+        assertThatThrownBy(() -> service.requestEmailOtp(sessionToken, kycRequest("jean@example.com")))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("patienter");
+
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void verifyEmailOtpCompletesKycOnCorrectCode() {
+        OnboardingSession session = accountVerifiedSession();
+        session.setPendingEmail("jean@example.com");
+        session.setEmailOtpCodeHash("hashed-code");
+        session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(5));
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+        when(passwordEncoder.matches("123456", "hashed-code")).thenReturn(true);
+
+        service.verifyEmailOtp(sessionToken, otpRequest("123456"));
+
+        assertThat(session.getEmail()).isEqualTo("jean@example.com");
+        assertThat(session.getPendingEmail()).isNull();
+        assertThat(session.getEmailOtpCodeHash()).isNull();
+        verify(onboardingSessionService).updateStatus(session, OnboardingStatus.KYC_COMPLETED);
+    }
+
+    @Test
+    void verifyEmailOtpThrowsAndIncrementsAttemptsOnWrongCode() {
+        OnboardingSession session = accountVerifiedSession();
+        session.setPendingEmail("jean@example.com");
+        session.setEmailOtpCodeHash("hashed-code");
+        session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(5));
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+        when(passwordEncoder.matches("000000", "hashed-code")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.verifyEmailOtp(sessionToken, otpRequest("000000")))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("incorrect");
+
+        assertThat(session.getEmailOtpAttempts()).isEqualTo(1);
+        verify(onboardingSessionService, never()).updateStatus(any(), any());
+    }
+
+    @Test
+    void verifyEmailOtpThrowsWhenExpired() {
+        OnboardingSession session = accountVerifiedSession();
+        session.setPendingEmail("jean@example.com");
+        session.setEmailOtpCodeHash("hashed-code");
+        session.setEmailOtpExpiresAt(LocalDateTime.now().minusMinutes(1));
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+        assertThatThrownBy(() -> service.verifyEmailOtp(sessionToken, otpRequest("123456")))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("expiré");
+    }
+
+    @Test
+    void verifyEmailOtpThrowsAfterMaxAttempts() {
+        OnboardingSession session = accountVerifiedSession();
+        session.setPendingEmail("jean@example.com");
+        session.setEmailOtpCodeHash("hashed-code");
+        session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(5));
+        session.setEmailOtpAttempts(5);
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+        assertThatThrownBy(() -> service.verifyEmailOtp(sessionToken, otpRequest("123456")))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("Trop de tentatives");
+    }
+
+    @Test
+    void skipEmailVerificationCompletesKycWithoutEmail() {
+        OnboardingSession session = accountVerifiedSession();
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+        service.skipEmailVerification(sessionToken);
+
+        verify(onboardingSessionService).updateStatus(session, OnboardingStatus.KYC_COMPLETED);
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void skipEmailVerificationThrowsWhenStepNotAccessible() {
+        OnboardingSession session = accountVerifiedSession();
+        session.setStatus(OnboardingStatus.KYC_COMPLETED);
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+        assertThatThrownBy(() -> service.skipEmailVerification(sessionToken))
+            .isInstanceOf(BusinessException.class);
+    }
+
+    private static KycRequest kycRequest(String email) {
+        KycRequest request = new KycRequest();
+        request.setEmail(email);
+        return request;
+    }
+
+    private static OtpVerificationRequest otpRequest(String code) {
+        OtpVerificationRequest request = new OtpVerificationRequest();
+        request.setCode(code);
+        return request;
     }
 
     private OnboardingSession termsAcceptedSession() {

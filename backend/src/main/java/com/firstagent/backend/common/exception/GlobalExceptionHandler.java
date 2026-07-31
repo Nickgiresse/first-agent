@@ -1,6 +1,7 @@
 package com.firstagent.backend.common.exception;
 
 import com.firstagent.backend.common.dto.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.List;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -51,6 +53,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("Erreur non gérée lors du traitement de la requête", ex);
+
         ErrorResponse error = ErrorResponse.builder()
             .success(false)
             .errorCode("INTERNAL_ERROR")

@@ -9,10 +9,6 @@ import lombok.Setter;
 @Setter
 public class ProfileCreationRequest {
 
-    @NotNull(message = "Les informations KYC sont obligatoires")
-    @Valid
-    private KycRequest kyc;
-
     @NotNull(message = "Les informations de PIN sont obligatoires")
     @Valid
     private PinCreationRequest pin;

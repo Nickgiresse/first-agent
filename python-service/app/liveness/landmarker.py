@@ -77,20 +77,17 @@ def analyze_frame(image_bgr: np.ndarray) -> FrameAnalysis:
 def _rotation_matrix_to_euler_degrees(matrix4x4: np.ndarray) -> tuple[float, float, float]:
     """Décompose la matrice de rotation 3x3 en 3 angles d'Euler (degrés), un par axe.
 
-    ATTENTION — hypothèse non vérifiée empiriquement, point le plus fragile du Module 4 :
-    la formule de décomposition ZYX classique associe naturellement rotation-X→"roll",
+    La formule de décomposition ZYX classique associe naturellement rotation-X→"roll",
     rotation-Y→"pitch", rotation-Z→"yaw" (convention aéronautique). En supposant que le modèle
-    canonique de visage de MediaPipe suit une convention X-droite/Y-haut/Z-vers-la-caméra (ce qui
-    est l'usage courant documenté pour ce type de modèle, mais je n'ai pas pu le confirmer avec une
-    vraie photo de tête tournée), la rotation Y (axe vertical) est le vrai "yaw" physique (tourner
-    la tête) et la rotation X (axe des oreilles) le vrai "pitch" (hocher la tête) — d'où le mapping
-    ci-dessous, qui réattribue les sorties de la formule en conséquence.
+    canonique de visage de MediaPipe suit une convention X-droite/Y-haut/Z-vers-la-caméra, la
+    rotation Y (axe vertical) est le vrai "yaw" physique (tourner la tête) et la rotation X (axe
+    des oreilles) le vrai "pitch" (hocher la tête) — d'où le mapping ci-dessous.
 
-    Seule la propriété "pose neutre → angles proches de 0" est vérifiée empiriquement (portrait
-    de test MediaPipe officiel). À confirmer avec de vraies photos où la tête est explicitement
-    tournée/inclinée avant de faire confiance à ces valeurs en production ; si le sens ou l'axe
-    s'avèrent inversés, corriger uniquement ce mapping de retour, le reste du pipeline (blink,
-    smile, sessions) n'en dépend pas.
+    Correspondance axe↔mouvement confirmée par un test réel caméra le 2026-07-31 (tourner la tête
+    déclenche bien TURN_LEFT/RIGHT, hocher déclenche bien LOOK_UP/DOWN, jamais l'inverse) — seul le
+    SIGNE au sein de chaque axe s'est révélé inversé par rapport à l'hypothèse initiale ; corrigé
+    dans app/liveness/actions.py (_verify_head_turn/_verify_head_pitch), pas ici, pour garder cette
+    fonction alignée sur la sortie brute de la décomposition matricielle.
     """
     r = matrix4x4[:3, :3]
     rotation_around_x = np.degrees(np.arctan2(r[2, 1], r[2, 2]))

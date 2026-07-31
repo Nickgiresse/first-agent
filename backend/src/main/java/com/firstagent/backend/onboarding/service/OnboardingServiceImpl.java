@@ -31,13 +31,18 @@ import com.firstagent.backend.onboarding.dto.*;
 import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.CustomerRepository;
+import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
 import com.firstagent.backend.pin.service.PinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,15 +53,26 @@ import java.util.UUID;
 public class OnboardingServiceImpl implements OnboardingService {
 
     private static final int REQUIRED_DOCUMENT_COUNT = 3;
+    private static final int OTP_LENGTH = 6;
+    private static final int OTP_VALIDITY_MINUTES = 10;
+    private static final int OTP_MAX_ATTEMPTS = 5;
+    private static final int OTP_RESEND_COOLDOWN_SECONDS = 45;
+
+    private static final SecureRandom OTP_RANDOM = new SecureRandom();
 
     // En dessous de ce score qualité (document OU selfie), le dossier n'est pas rejeté : il est
     // enregistré jusqu'au bout mais marqué pour révision manuelle par l'agence.
     @Value("${app.quality.manual-review-threshold:70}")
     private double manualReviewThreshold;
 
+    @Value("${app.mail.from-address}")
+    private String fromAddress;
+
     private final OnboardingSessionService onboardingSessionService;
     private final CustomerRepository customerRepository;
     private final PinService pinService;
+    private final PasswordEncoder passwordEncoder;
+    private final JavaMailSender mailSender;
     private final DocumentService documentService;
     private final OcrService ocrService;
     private final FaceVerificationService faceVerificationService;
@@ -71,9 +87,77 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final DocumentOcrResultRepository documentOcrResultRepository;
     private final FaceVerificationResultRepository faceVerificationResultRepository;
     private final LivenessResultRepository livenessResultRepository;
+    private final OnboardingSessionRepository onboardingSessionRepository;
 
     @Override
-    public void validateKyc(String sessionToken, KycRequest request) {
+    @Transactional
+    public void requestEmailOtp(String sessionToken, KycRequest request) {
+        OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
+
+        if (session.getStatus() != OnboardingStatus.ACCOUNT_VERIFIED) {
+            throw new BusinessException("Étape KYC déjà complétée ou non accessible à ce stade");
+        }
+
+        if (session.getEmailOtpLastSentAt() != null
+            && session.getEmailOtpLastSentAt().plusSeconds(OTP_RESEND_COOLDOWN_SECONDS).isAfter(LocalDateTime.now())) {
+            throw new BusinessException("Veuillez patienter avant de redemander un code de vérification");
+        }
+
+        if (customerRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException("Cette adresse e-mail est déjà utilisée par un autre utilisateur.", HttpStatus.CONFLICT);
+        }
+
+        String code = generateOtpCode();
+
+        session.setPendingEmail(request.getEmail());
+        session.setEmailOtpCodeHash(passwordEncoder.encode(code));
+        session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
+        session.setEmailOtpAttempts(0);
+        session.setEmailOtpLastSentAt(LocalDateTime.now());
+        onboardingSessionRepository.save(session);
+
+        sendOtpEmail(request.getEmail(), code);
+    }
+
+    @Override
+    @Transactional
+    public void verifyEmailOtp(String sessionToken, OtpVerificationRequest request) {
+        OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
+
+        if (session.getStatus() != OnboardingStatus.ACCOUNT_VERIFIED) {
+            throw new BusinessException("Étape KYC déjà complétée ou non accessible à ce stade");
+        }
+
+        if (session.getPendingEmail() == null || session.getEmailOtpCodeHash() == null) {
+            throw new BusinessException("Aucun code n'a été envoyé. Demandez d'abord un code de vérification.");
+        }
+
+        if (session.getEmailOtpExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Ce code a expiré. Demandez un nouveau code.");
+        }
+
+        if (session.getEmailOtpAttempts() >= OTP_MAX_ATTEMPTS) {
+            throw new BusinessException("Trop de tentatives incorrectes. Demandez un nouveau code.");
+        }
+
+        if (!passwordEncoder.matches(request.getCode(), session.getEmailOtpCodeHash())) {
+            session.setEmailOtpAttempts(session.getEmailOtpAttempts() + 1);
+            onboardingSessionRepository.save(session);
+            throw new BusinessException("Code de vérification incorrect");
+        }
+
+        session.setEmail(session.getPendingEmail());
+        session.setPendingEmail(null);
+        session.setEmailOtpCodeHash(null);
+        session.setEmailOtpExpiresAt(null);
+        session.setEmailOtpAttempts(0);
+        session.setEmailOtpLastSentAt(null);
+        onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
+    }
+
+    @Override
+    @Transactional
+    public void skipEmailVerification(String sessionToken) {
         OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
 
         if (session.getStatus() != OnboardingStatus.ACCOUNT_VERIFIED) {
@@ -83,9 +167,24 @@ public class OnboardingServiceImpl implements OnboardingService {
         onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
     }
 
+    private String generateOtpCode() {
+        int bound = (int) Math.pow(10, OTP_LENGTH);
+        return String.format("%0" + OTP_LENGTH + "d", OTP_RANDOM.nextInt(bound));
+    }
+
+    private void sendOtpEmail(String email, String code) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(email);
+        message.setSubject("Votre code de vérification Afriland First Bank");
+        message.setText("Votre code de vérification est : " + code + "\n\nCe code est valable "
+            + OTP_VALIDITY_MINUTES + " minutes. Ne le partagez avec personne.");
+        mailSender.send(message);
+    }
+
     @Override
     @Transactional
-    public void createProfile(String sessionToken, KycRequest kycRequest, PinCreationRequest pinRequest) {
+    public void createProfile(String sessionToken, PinCreationRequest pinRequest) {
         OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
 
         if (session.getStatus() != OnboardingStatus.KYC_COMPLETED) {
@@ -100,11 +199,6 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new BusinessException("Un utilisateur existe déjà pour ce numéro de compte. Utilisez la réinitialisation de PIN si nécessaire.", HttpStatus.CONFLICT);
         }
 
-        if (kycRequest.getEmail() != null && customerRepository.existsByEmail(kycRequest.getEmail())) {
-            throw new BusinessException("Cette adresse e-mail est déjà utilisée par un autre utilisateur.", HttpStatus.CONFLICT);
-        }
-
-        session.setEmail(kycRequest.getEmail());
         session.setPinHash(pinService.hashPin(pinRequest.getPin()));
         onboardingSessionService.updateStatus(session, OnboardingStatus.PIN_CREATED);
     }

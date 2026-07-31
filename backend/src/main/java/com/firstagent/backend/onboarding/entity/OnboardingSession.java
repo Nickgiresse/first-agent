@@ -39,6 +39,22 @@ public class OnboardingSession {
     @Column(name = "email", length = 150)
     private String email;
 
+    @Column(name = "pending_email", length = 150)
+    private String pendingEmail;
+
+    @Column(name = "email_otp_code_hash")
+    private String emailOtpCodeHash;
+
+    @Column(name = "email_otp_expires_at")
+    private LocalDateTime emailOtpExpiresAt;
+
+    @Column(name = "email_otp_attempts", nullable = false)
+    @Builder.Default
+    private int emailOtpAttempts = 0;
+
+    @Column(name = "email_otp_last_sent_at")
+    private LocalDateTime emailOtpLastSentAt;
+
     @Column(name = "pin_hash")
     private String pinHash;
 

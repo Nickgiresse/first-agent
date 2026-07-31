@@ -204,6 +204,61 @@ class OcrServiceImplTest {
     }
 
     @Test
+    void confirmExtractedDataUpdatesStatusToConfirmedForReceipt() {
+        OnboardingSession session = session("Nick", "Foadjo");
+        StagingOcrResult existing = StagingOcrResult.builder()
+            .id(UUID.randomUUID())
+            .onboardingSession(session)
+            .documentKind("RECEPISSE")
+            .status(OcrStatus.EXTRACTED)
+            .ocrProvider("PYTHON_VISION")
+            .build();
+
+        OcrConfirmationRequest request = new OcrConfirmationRequest();
+        request.setFirstName("Nick");
+        request.setLastName("Foadjo");
+        request.setKitNumber("KIT328");
+        request.setRequestIdentifier("OU36328I5J3N7CQPJJ85");
+        request.setPaymentAmount("2800");
+        request.setPaymentDate(LocalDate.of(2022, 7, 13));
+
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+        when(stagingOcrResultRepository.findByOnboardingSession_Id(sessionId)).thenReturn(Optional.of(existing));
+        when(stagingOcrResultRepository.save(any(StagingOcrResult.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OcrExtractionResponse response = ocrService.confirmExtractedData(sessionToken, request);
+
+        assertThat(response.getKitNumber()).isEqualTo("KIT328");
+        assertThat(response.getPaymentAmount()).isEqualTo("2800");
+        assertThat(response.getPaymentDate()).isEqualTo(LocalDate.of(2022, 7, 13));
+        assertThat(response.getStatus()).isEqualTo(OcrStatus.CONFIRMED.name());
+    }
+
+    @Test
+    void confirmExtractedDataThrowsWhenReceiptMissingPaymentDate() {
+        OnboardingSession session = session("Nick", "Foadjo");
+        StagingOcrResult existing = StagingOcrResult.builder()
+            .id(UUID.randomUUID())
+            .onboardingSession(session)
+            .documentKind("RECEPISSE")
+            .status(OcrStatus.EXTRACTED)
+            .ocrProvider("PYTHON_VISION")
+            .build();
+
+        OcrConfirmationRequest request = new OcrConfirmationRequest();
+        request.setFirstName("Nick");
+        request.setLastName("Foadjo");
+        request.setKitNumber("KIT328");
+
+        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+        when(stagingOcrResultRepository.findByOnboardingSession_Id(sessionId)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> ocrService.confirmExtractedData(sessionToken, request))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("paiement");
+    }
+
+    @Test
     void confirmExtractedDataThrowsWhenExpiryDateIsInThePast() {
         OnboardingSession session = session("Marie", "Fotso");
         StagingOcrResult existing = StagingOcrResult.builder()
