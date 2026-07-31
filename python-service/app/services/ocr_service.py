@@ -9,20 +9,41 @@ from app.ocr.receipt_parser import parse_receipt_fields
 from app.utils.image_io import decode_image
 
 
+def _lire_au_mieux(image_bgr, settings: Settings):
+    """Lit une face en essayant les deux préparations, et garde la meilleure.
+
+    Le prétraitement est calibré pour Tesseract : niveaux de gris, fond aplati,
+    agrandissement. Mesuré sur trois CNI réelles avec RapidOCR, il aide sur
+    deux d'entre elles (636 caractères contre 601) et nuit franchement sur la
+    troisième (408 contre 594, soit 3 champs extraits au lieu de 6). Aucune
+    des deux préparations ne l'emporte partout, et rien dans l'image ne permet
+    de deviner à l'avance laquelle conviendra : on lit donc les deux et on
+    retient la plus riche.
+
+    Le volume de texte sert d'arbitre. C'est grossier mais fiable ici : les
+    échecs observés sont massifs, une préparation inadaptée fait perdre un
+    tiers du texte, pas quelques caractères.
+    """
+    meilleur_texte, meilleurs_mots = "", []
+    for image in (preprocess_for_ocr(image_bgr), image_bgr):
+        texte = extract_text(image, settings)
+        if len(texte) > len(meilleur_texte):
+            meilleur_texte = texte
+            meilleurs_mots = extract_words(image, settings)
+    return meilleur_texte, meilleurs_mots
+
+
 def extract_document_fields(
     front_bytes: bytes, back_bytes: bytes | None = None, settings: Settings | None = None
 ) -> DocumentExtractResponse:
     settings = settings or get_settings()
 
-    front_image = preprocess_for_ocr(decode_image(front_bytes))
-    front_text = extract_text(front_image, settings)
-    all_words = extract_words(front_image, settings)
+    front_text, all_words = _lire_au_mieux(decode_image(front_bytes), settings)
     combined_text = front_text
 
     if back_bytes:
-        back_image = preprocess_for_ocr(decode_image(back_bytes))
-        back_text = extract_text(back_image, settings)
-        all_words.extend(extract_words(back_image, settings))
+        back_text, back_words = _lire_au_mieux(decode_image(back_bytes), settings)
+        all_words.extend(back_words)
         combined_text = f"{front_text}\n{back_text}"
 
     average_confidence = sum(w.confidence for w in all_words) / len(all_words) if all_words else 0.0

@@ -10,9 +10,61 @@
             <h2>Conditions d’utilisation</h2>
             <p class="lead">Veuillez prendre connaissance des conditions du service avant de finaliser votre
                 inscription.</p>
-            <article class="terms">Vos données sont traitées afin de vous identifier et de sécuriser votre accès. Le
-                service WhatsApp reste soumis aux conditions d’utilisation d’Afriland First Bank.</article><label
-                class="consent"><input type="checkbox" [checked]="accepted()"
+
+            <!-- Le texte doit être réellement parcouru : la case reste inactive tant
+                 que le défilement n'a pas atteint le bas. Un consentement bancaire
+                 doit être éclairé, or une case cochable d'emblée n'établit pas que le
+                 client a eu le texte sous les yeux. -->
+            <article class="terms" #termsScroll (scroll)="onScroll()">
+                <h3>1. Objet du service</h3>
+                <p>FirstAgent est l’assistant bancaire d’Afriland First Bank sur WhatsApp. Dans sa phase actuelle il
+                    permet la consultation (solde, RIB, relevés, agences), le dépôt et le suivi des réclamations, et
+                    l’entrée en relation à distance. Aucune opération de mouvement de fonds n’est disponible : toute
+                    évolution sera annoncée avec ses plafonds.</p>
+
+                <h3>2. Accès et sécurité</h3>
+                <p>Votre accès est protégé par un code PIN personnel de 4 à 6 chiffres, jamais demandé ni saisi dans
+                    WhatsApp : uniquement sur les pages web sécurisées de la Banque. Les documents sensibles sont remis
+                    par lien sécurisé à usage unique. Afriland First Bank ne vous demandera jamais votre PIN ni un code
+                    à usage unique. Signalez immédiatement toute perte, vol ou changement de téléphone ou de carte SIM
+                    au +237 222 23 30 10.</p>
+
+                <h3>3. Vérification d’identité</h3>
+                <p>L’entrée en relation comprend la lecture de votre pièce d’identité et une vérification biométrique de
+                    votre visage, avec votre consentement explicite. Les cas douteux sont examinés par un conseiller.
+                    Toute usurpation d’identité est signalée aux autorités compétentes.</p>
+
+                <h3>4. Assistant automatisé</h3>
+                <p>Vous dialoguez avec un assistant automatisé fonctionnant sur les serveurs de la Banque, sans
+                    transmission à des services d’intelligence artificielle externes. Ses réponses sont informatives et
+                    ne valent pas conseil ; vous pouvez à tout moment demander un conseiller humain. Toute tentative de
+                    manipulation de l’assistant est bloquée et journalisée.</p>
+
+                <h3>5. Tarification</h3>
+                <p>Le service est gratuit pendant les 12 premiers mois. Au-delà, la grille tarifaire en vigueur
+                    s’applique, avec information préalable au moins 30 jours avant la première facturation et droit de
+                    résiliation sans frais.</p>
+
+                <h3>6. Traçabilité et preuve</h3>
+                <p>Toutes les interactions sont journalisées, horodatées et scellées cryptographiquement sur les
+                    serveurs de la Banque, conformément à la réglementation COBAC/CEMAC. Ces enregistrements et les
+                    confirmations par courriel font foi ; la suppression de messages dans WhatsApp est sans
+                    incidence.</p>
+
+                <h3>7. Données personnelles</h3>
+                <p>Vos données, dont les données biométriques de l’entrée en relation recueillies avec votre
+                    consentement, sont traitées par Afriland First Bank pour l’exécution du service et ses obligations
+                    réglementaires. Vous disposez de droits d’accès, de rectification et de revue humaine des décisions
+                    automatisées : dpo&#64;afrilandfirstbank.com.</p>
+            </article>
+
+            <p class="terms-hint" [class.terms-hint--done]="hasRead()">
+                {{ hasRead()
+                ? '✓ Conditions lues — vous pouvez maintenant accepter.'
+                : '📖 Faites défiler les conditions ci-dessus jusqu’en bas pour pouvoir accepter.' }}
+            </p>
+
+            <label class="consent"><input type="checkbox" [checked]="accepted()" [disabled]="!hasRead()"
                     (change)="accepted.set(!accepted())"><span>J’accepte les conditions d’utilisation et la politique de
                     confidentialité.</span></label><button class="primary-button" [disabled]="!accepted()||busy()"
                 (click)="submit()">{{busy()?'Activation…':'Activer mon accès'}}</button>

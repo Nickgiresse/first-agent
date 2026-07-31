@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # via l'option "add to PATH" (ex: C:\Program Files\Tesseract-OCR\tesseract.exe).
     tesseract_cmd: str = "tesseract"
     ocr_languages: str = "fra+eng"
+    # Moteur d'extraction : "rapidocr" (défaut) ou "tesseract". RapidOCR lit
+    # environ trois fois plus de texte sur les CNI camerounaises (607 caractères
+    # contre 228, mesuré sur trois pièces réelles), ce qui change tout en aval :
+    # avec Tesseract l'analyseur ne trouve ni nom, ni prénom, ni lieu de
+    # naissance sur ces mêmes images.
+    ocr_engine: str = "rapidocr"
     min_ocr_confidence: float = 40.0            # confiance moyenne (0-100) en dessous de laquelle on avertit
 
     # --- Module 3 : qualité du visage (selfie) ---

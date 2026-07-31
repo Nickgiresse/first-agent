@@ -12,6 +12,24 @@
     line-height: 1.55
 }
 
+/* Indication de lecture : passe au vert une fois le texte parcouru. */
+.terms-hint {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border: 1px solid #f5e0a8;
+    border-radius: 8px;
+    background: #fff8e6;
+    color: #8a6100;
+    font-size: 13px;
+    line-height: 1.45
+}
+
+.terms-hint--done {
+    border-color: #c8e6c9;
+    background: #f0f8f0;
+    color: #2e7d32
+}
+
 .consent {
     display: flex;
     gap: 12px;
@@ -22,4 +40,15 @@
 .consent input {
     accent-color: var(--color-primary);
     margin-top: 3px
+}
+
+/* La case grisée doit se voir : sans repère visuel, le client la clique,
+   rien ne se passe, et il croit à un défaut de l'application. */
+.consent:has(input:disabled) {
+    opacity: .6;
+    cursor: not-allowed
+}
+
+.consent input:disabled {
+    cursor: not-allowed
 }
