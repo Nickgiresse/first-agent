@@ -211,26 +211,10 @@ class OnboardingServiceImplTest {
             .hasMessageContaining("Trop de tentatives");
     }
 
-    @Test
-    void skipEmailVerificationCompletesKycWithoutEmail() {
-        OnboardingSession session = accountVerifiedSession();
-        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
-
-        service.skipEmailVerification(sessionToken);
-
-        verify(onboardingSessionService).updateStatus(session, OnboardingStatus.KYC_COMPLETED);
-        verifyNoInteractions(mailSender);
-    }
-
-    @Test
-    void skipEmailVerificationThrowsWhenStepNotAccessible() {
-        OnboardingSession session = accountVerifiedSession();
-        session.setStatus(OnboardingStatus.KYC_COMPLETED);
-        when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
-
-        assertThatThrownBy(() -> service.skipEmailVerification(sessionToken))
-            .isInstanceOf(BusinessException.class);
-    }
+    // Les deux tests du contournement /kyc/skip sont retirés avec la
+    // fonctionnalité : ils vérifiaient précisément qu'une session pouvait
+    // atteindre KYC_COMPLETED sans adresse e-mail, ce qui n'est plus un
+    // comportement recherché. L'envoi fonctionne, seule MAIL_PASSWORD manquait.
 
     private static KycRequest kycRequest(String email) {
         KycRequest request = new KycRequest();
