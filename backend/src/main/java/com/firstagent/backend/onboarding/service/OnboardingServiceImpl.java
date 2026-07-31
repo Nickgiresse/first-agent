@@ -155,18 +155,6 @@ public class OnboardingServiceImpl implements OnboardingService {
         onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
     }
 
-    @Override
-    @Transactional
-    public void skipEmailVerification(String sessionToken) {
-        OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
-
-        if (session.getStatus() != OnboardingStatus.ACCOUNT_VERIFIED) {
-            throw new BusinessException("Étape KYC déjà complétée ou non accessible à ce stade");
-        }
-
-        onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
-    }
-
     private String generateOtpCode() {
         int bound = (int) Math.pow(10, OTP_LENGTH);
         return String.format("%0" + OTP_LENGTH + "d", OTP_RANDOM.nextInt(bound));

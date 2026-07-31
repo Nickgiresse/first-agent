@@ -72,19 +72,8 @@ export class Kyc {
     this.requestCode();
   }
 
-  // Contournement temporaire tant que l'envoi d'e-mail (SMTP) est en panne.
-  skipEmail(): void {
-    if (this.submitting()) return;
-    this.submitting.set(true);
-    this.error.set(null);
-    this.service.skipEmailVerification().subscribe({
-      next: () => this.router.navigateByUrl('/onboarding/pin-creation'),
-      error: err => {
-        this.error.set(err?.message ?? err?.error?.message ?? 'Impossible de continuer sans e-mail.');
-        this.submitting.set(false);
-      }
-    });
-  }
+  // skipEmail retiré : l'envoi d'e-mail fonctionne, seule la variable
+  // MAIL_PASSWORD n'était pas renseignée côté backend.
 
   changeEmail(): void {
     this.phase.set('EMAIL');

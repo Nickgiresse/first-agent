@@ -33,14 +33,18 @@ public class OnboardingController {
         return ResponseEntity.ok(ApiResponse.success(null, "Adresse e-mail vérifiée"));
     }
 
-    // Contournement temporaire tant que l'envoi d'e-mail (SMTP) est en panne — voir OnboardingService.
-    @PostMapping("/kyc/skip")
-    public ResponseEntity<ApiResponse<Void>> skipEmailVerification(
-        @RequestHeader("X-Session-Token") String sessionToken
-    ) {
-        onboardingService.skipEmailVerification(sessionToken);
-        return ResponseEntity.ok(ApiResponse.success(null, "Étape KYC passée sans e-mail"));
-    }
+    // Le contournement /kyc/skip a été retiré. Il avait été ajouté « tant que
+    // l'envoi d'e-mail est en panne », mais l'envoi fonctionne : serveur, port
+    // et compte configurés sont corrects, et l'authentification Office 365
+    // passe depuis le poste. Seule la variable MAIL_PASSWORD n'était pas
+    // renseignée, ce qui faisait échouer le démarrage sur un placeholder non
+    // résolu et a été pris pour une panne — voir .env.example.
+    //
+    // Le conserver aurait été plus qu'une étape sautée : le bouton était offert
+    // au client dans l'interface, et rien ne distinguait un envoi réellement en
+    // échec d'un client préférant ne pas donner son adresse. Or le courriel
+    // porte les codes à usage unique et le lien de réinitialisation du PIN : un
+    // compte activé sans adresse vérifiée n'offre aucun moyen de récupération.
 
     @PostMapping("/profile")
     public ResponseEntity<ApiResponse<Void>> createProfile(

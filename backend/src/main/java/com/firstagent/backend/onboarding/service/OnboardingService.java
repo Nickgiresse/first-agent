@@ -8,9 +8,8 @@ public interface OnboardingService {
 
     void verifyEmailOtp(String sessionToken, OtpVerificationRequest request);
 
-    // Contournement temporaire tant que l'envoi d'e-mail (SMTP) est en panne : permet de passer
-    // l'étape KYC sans adresse e-mail ni OTP. À retirer une fois l'envoi d'e-mail rétabli.
-    void skipEmailVerification(String sessionToken);
+    // skipEmailVerification retiré : l'envoi d'e-mail fonctionne, seule la
+    // variable MAIL_PASSWORD manquait (voir .env.example et OnboardingController).
 
     void createProfile(String sessionToken, PinCreationRequest pinRequest);
 
