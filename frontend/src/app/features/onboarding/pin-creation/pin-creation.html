@@ -1,24 +1,29 @@
 <main class="journey">
     <aside class="journey-aside"><a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
                 alt="">Afriland First Bank</a>
-        <h1>Protégez votre accès.</h1>
-        <p>Votre PIN est personnel. Il sera demandé pour les opérations sensibles.</p>
+        <h1>{{ lang.t('Protégez votre accès.', 'Protect your access.') }}</h1>
+        <p>{{ lang.t('Votre PIN est personnel. Il sera demandé pour les opérations sensibles.', 'Your PIN is personal.
+            It will be required for sensitive operations.') }}</p>
     </aside>
     <section class="journey-main">
         <form class="form-shell" [formGroup]="form">
-            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
-            <div class="progress-meta"><span>Étape 3 sur 3</span><span>100 % complété</span></div>
+            <button type="button" class="back-link" (click)="goBack()">← {{ lang.t('Retour', 'Back') }}</button>
+            <div class="progress-meta"><span>{{ lang.t('Étape 3 sur 3', 'Step 3 of 3') }}</span><span>{{ lang.t('100 %
+                    complété', '100% complete') }}</span></div>
             <div class="progress"><span style="width:100%"></span></div>
-            <h2>Créez votre code PIN</h2>
-            <p class="lead">Choisissez un code personnel de 4 à 6 chiffres.</p><label class="field-label" for="pin">Code
-                PIN</label><input id="pin" class="text-field" type="password" inputmode="numeric" maxlength="6"
+            <h2>{{ lang.t('Créez votre code PIN', 'Create your PIN code') }}</h2>
+            <p class="lead">{{ lang.t('Choisissez un code personnel de 4 à 6 chiffres.', 'Choose a personal 4 to 6
+                digit code.') }}</p><label class="field-label" for="pin">{{ lang.t('Code PIN', 'PIN code')
+                }}</label><input id="pin" class="text-field" type="password" inputmode="numeric" maxlength="6"
                 formControlName="pin" (input)="digits('pin')"><label class="field-label pin-label"
-                for="confirmation">Confirmez votre code PIN</label><input id="confirmation" class="text-field"
+                for="confirmation">{{ lang.t('Confirmez votre code PIN', 'Confirm your PIN code') }}</label><input
+                id="confirmation" class="text-field"
                 type="password" inputmode="numeric" maxlength="6" formControlName="confirmation"
                 (input)="digits('confirmation')">@if(error()){<span class="form-error">{{error()}}</span>}<button
                 class="primary-button" type="button" (click)="submit()"
-                [disabled]="submitting()">{{submitting()?'Création…':'Créer mon code PIN'}}</button><a class="pin-reset"
-                href="/forgot-pin">Vous avez oublié votre PIN ?</a>
+                [disabled]="submitting()">{{submitting()? lang.t('Création…','Creating…') : lang.t('Créer mon code
+                PIN','Create my PIN code')}}</button><a class="pin-reset"
+                href="/forgot-pin">{{ lang.t('Vous avez oublié votre PIN ?', 'Forgot your PIN?') }}</a>
         </form>
     </section>
 </main>

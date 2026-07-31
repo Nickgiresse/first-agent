@@ -1,14 +1,17 @@
 <main class="journey">
     <aside class="journey-aside">
         <a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png" alt="">Afriland First Bank</a>
-        <h1>Vérification de vivacité</h1>
-        <p>Nous devons nous assurer qu'une vraie personne se trouve devant la caméra. Suivez les instructions affichées.</p>
+        <h1>{{ lang.t('Vérification de vivacité', 'Liveness check') }}</h1>
+        <p>{{ lang.t('Nous devons nous assurer qu\'une vraie personne se trouve devant la caméra. Suivez les
+            instructions affichées.', 'We need to make sure a real person is in front of the camera. Follow the
+            instructions shown.') }}</p>
     </aside>
     <section class="journey-main">
         <div class="form-shell">
-            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
-            <h2>Preuve de vivacité</h2>
-            <p class="lead">Gardez votre visage bien visible et centré pendant toute la vérification.</p>
+            <button type="button" class="back-link" (click)="goBack()">← {{ lang.t('Retour', 'Back') }}</button>
+            <h2>{{ lang.t('Preuve de vivacité', 'Liveness proof') }}</h2>
+            <p class="lead">{{ lang.t('Gardez votre visage bien visible et centré pendant toute la vérification.',
+                'Keep your face clearly visible and centred throughout the check.') }}</p>
 
             <div class="liveness-viewport">
                 <video #videoRef autoplay playsinline muted></video>
@@ -23,28 +26,33 @@
             </div>
 
             @if (actions().length > 0) {
-                <p class="liveness-progress">Étape {{ currentActionIndex() + 1 }} / {{ actions().length }}</p>
+                <p class="liveness-progress">{{ lang.t('Étape', 'Step') }} {{ currentActionIndex() + 1 }} / {{
+                    actions().length }}</p>
             }
 
             @switch (phase()) {
                 @case ('LOADING') {
-                    <p>Préparation de la caméra…</p>
+                    <p>{{ lang.t('Préparation de la caméra…', 'Preparing the camera…') }}</p>
                 }
                 @case ('READY') {
-                    <button class="primary-button" type="button" (click)="startCapture()">Commencer</button>
+                    <button class="primary-button" type="button" (click)="startCapture()">{{ lang.t('Commencer',
+                        'Start') }}</button>
                 }
                 @case ('CAPTURING') {
-                    <p class="liveness-status" aria-live="polite">Capture en cours, ne bougez pas trop vite…</p>
+                    <p class="liveness-status" aria-live="polite">{{ lang.t('Capture en cours, ne bougez pas trop
+                        vite…', 'Capturing, please don’t move too quickly…') }}</p>
                 }
                 @case ('VERIFYING') {
-                    <p class="liveness-status" aria-live="polite">Vérification…</p>
+                    <p class="liveness-status" aria-live="polite">{{ lang.t('Vérification…', 'Verifying…') }}</p>
                 }
                 @case ('RETRY') {
-                    <span class="form-error">{{ error() ?? "Mouvement non détecté, réessayez." }}</span>
-                    <button class="primary-button" type="button" (click)="retryCurrentAction()">Réessayer</button>
+                    <span class="form-error">{{ error() ?? lang.t('Mouvement non détecté, réessayez.', 'Movement not
+                        detected, please try again.') }}</span>
+                    <button class="primary-button" type="button" (click)="retryCurrentAction()">{{ lang.t('Réessayer',
+                        'Try again') }}</button>
                 }
                 @case ('FINALIZING') {
-                    <p>Finalisation de la vérification…</p>
+                    <p>{{ lang.t('Finalisation de la vérification…', 'Finalising the check…') }}</p>
                 }
                 @case ('ERROR') {
                     <span class="form-error">{{ error() }}</span>

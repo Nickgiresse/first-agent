@@ -3,7 +3,7 @@
 }
 
 .terms {
-    max-height: 180px;
+    max-height: 280px;
     overflow: auto;
     padding: 18px;
     border: 1px solid var(--color-border);
@@ -12,14 +12,60 @@
     line-height: 1.55
 }
 
+.terms h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: var(--color-text)
+}
+
+.terms h4 {
+    margin: 18px 0 6px;
+    font-size: .9rem;
+    color: var(--color-text)
+}
+
+.terms p {
+    margin: 0 0 10px
+}
+
+.terms-end {
+    margin-top: 18px;
+    text-align: center;
+    font-style: italic
+}
+
+.scroll-hint {
+    margin: 10px 0 0;
+    font-size: .85rem;
+    color: var(--color-primary)
+}
+
 .consent {
     display: flex;
     gap: 12px;
-    margin: 22px 0;
+    margin: 18px 0;
     line-height: 1.45
 }
 
 .consent input {
     accent-color: var(--color-primary);
     margin-top: 3px
+}
+
+/* Case désactivée tant que les conditions n'ont pas été déroulées jusqu'au bout. */
+.consent input:disabled+span {
+    opacity: .55
+}
+
+.form-error {
+    margin: 0 0 14px;
+    color: var(--color-primary-dark);
+    font-size: .9rem
+}
+
+.legal-note {
+    margin: 18px 0 0;
+    font-size: .78rem;
+    line-height: 1.5;
+    color: var(--color-muted)
 }

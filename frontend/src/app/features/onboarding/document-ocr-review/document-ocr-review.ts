@@ -4,6 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { DocumentService } from '../../../core/services/document';
 import { DocumentKind } from '../../../core/models/ocr.model';
+import { LanguageService } from '../../../core/services/language';
 
 @Component({
   selector: 'app-document-ocr-review',
@@ -12,6 +13,8 @@ import { DocumentKind } from '../../../core/models/ocr.model';
   styleUrl: './document-ocr-review.scss'
 })
 export class DocumentOcrReview implements OnInit {
+  readonly lang = inject(LanguageService);
+
   private readonly docs = inject(DocumentService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);

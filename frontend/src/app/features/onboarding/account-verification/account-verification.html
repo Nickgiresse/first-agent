@@ -5,43 +5,52 @@
             Afriland First Bank
         </a>
         <h1>
-            Votre accès sécurisé commence ici.
+            {{ lang.t('Votre accès sécurisé commence ici.', 'Your secure access starts here.') }}
         </h1>
         <p>
-            Nous utilisons votre numéro de compte pour retrouver votre identité, sans vous demander de la ressaisir.
+            {{ lang.t('Nous utilisons votre numéro de compte pour retrouver votre identité, sans vous demander de la
+            ressaisir.', 'We use your account number to retrieve your identity, so you never have to type it again.') }}
         </p>
         <nav class="journey-steps">
             <div class="journey-step active">
                 <i class="step-icon">1</i>
-                <span><b>Identité</b><br>Vérification du compte</span>
+                <span><b>{{ lang.t('Identité', 'Identity') }}</b><br>{{ lang.t('Vérification du compte', 'Account
+                    verification') }}</span>
             </div>
-            <div class="journey-step"><i class="step-icon">2</i><span>Code PIN</span></div>
-            <div class="journey-step"><i class="step-icon">3</i><span>Validation</span></div>
+            <div class="journey-step"><i class="step-icon">2</i><span>{{ lang.t('Code PIN', 'PIN code') }}</span></div>
+            <div class="journey-step"><i class="step-icon">3</i><span>{{ lang.t('Validation', 'Validation') }}</span>
+            </div>
         </nav>
-        <footer class="journey-footer">Mentions légales · Confidentialité</footer>
+        <footer class="journey-footer">{{ lang.t('Mentions légales · Confidentialité', 'Legal notice · Privacy') }}
+        </footer>
     </aside>
     <section class="journey-main">
         <div class="form-shell">
-            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
-            <div class="progress-meta"><span>Étape 1 sur 3</span><span>33 % complété</span></div>
+            <button type="button" class="back-link" (click)="goBack()">← {{ lang.t('Retour', 'Back') }}</button>
+            <div class="progress-meta"><span>{{ lang.t('Étape 1 sur 3', 'Step 1 of 3') }}</span><span>{{ lang.t('33 %
+                    complété', '33% complete') }}</span></div>
             <div class="progress"><span style="width:33%"></span></div>
-            <h2>Vérifions votre numéro de compte</h2>
-            <p class="lead">Saisissez les 18 derniers chiffres. Le préfixe Afriland First Bank est déjà renseigné.</p>
-            <label class="field-label" for="accountSuffix">Numéro de compte</label>
+            <h2>{{ lang.t('Vérifions votre numéro de compte', 'Let’s verify your account number') }}</h2>
+            <p class="lead">{{ lang.t('Saisissez les 18 derniers chiffres. Le préfixe Afriland First Bank est déjà
+                renseigné.', 'Enter the last 18 digits. The Afriland First Bank prefix is already filled in.') }}</p>
+            <label class="field-label" for="accountSuffix">{{ lang.t('Numéro de compte', 'Account number') }}</label>
             <div class="account-field"><span class="account-prefix">10005</span>
                 <input id="accountSuffix" type="text"
-                    inputmode="numeric" autocomplete="off" maxlength="18" placeholder="_____ ___________ __"
+                    inputmode="numeric" autocomplete="off" maxlength="20" placeholder="_____ ___________ __"
                     (input)="onInput($event)" (blur)="touched.set(true)"></div>
-            <p class="account-mask" aria-hidden="true">10005 {{ displayValue() }}</p>
-            <span class="field-help">Format complet : 10005
-                _____ ___________ __</span>@if (touched() && !valid()) { <span class="form-error">Veuillez
-                saisir exactement 18 chiffres.</span> } @if (error()) { <span class="form-error">{{ error() }}</span>
+            @if (touched() && !valid()) { <span class="form-error">{{ lang.t('Veuillez
+                saisir exactement 18 chiffres.', 'Please enter exactly 18 digits.') }}</span> } @if (error()) { <span
+                class="form-error">{{ error() }}</span>
             }<button class="primary-button" type="button" (click)="submit()"
-                [disabled]="!valid() || submitting()">{{ submitting() ? 'Vérification…' : 'Continuer' }}</button>
+                [disabled]="!valid() || submitting()">{{ submitting() ? lang.t('Vérification…', 'Verifying…') :
+                lang.t('Continuer', 'Continue') }}</button>
             <hr class="divider">
-            <p class="support">Besoin d’aide ? <a href="mailto:support@afrilandfirstbank.com">Contacter le support</a>
+            <p class="support">{{ lang.t('Besoin d’aide ?', 'Need help?') }} <a
+                    href="mailto:support@afrilandfirstbank.com">{{ lang.t('Contacter le support', 'Contact support')
+                    }}</a>
             </p>
         </div>
-        <footer class="legal">Politique de cookies · Information sécurité</footer>
+        <footer class="legal">{{ lang.t('Politique de cookies · Information sécurité', 'Cookie policy · Security
+            information') }}</footer>
     </section>
 </main>

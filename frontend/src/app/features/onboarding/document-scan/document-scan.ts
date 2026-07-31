@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CameraService } from '../../../core/services/camera';
 import { DocumentService } from '../../../core/services/document';
 import { QualityReport, analyzeImageQuality, computeCoverSourceRect } from '../../../core/services/image-quality-analyzer';
+import { LanguageService } from '../../../core/services/language';
 
 type CaptureStep = 'FRONT' | 'BACK' | 'UPLOADING';
 
@@ -21,6 +22,8 @@ const ANALYSIS_HEIGHT = 150;
   styleUrl: './document-scan.scss'
 })
 export class DocumentScan {
+  readonly lang = inject(LanguageService);
+
   private readonly camera = inject(CameraService);
   private readonly docs = inject(DocumentService);
   private readonly router = inject(Router);

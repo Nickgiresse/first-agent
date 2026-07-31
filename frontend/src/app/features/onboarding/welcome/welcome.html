@@ -3,22 +3,32 @@
     <a class="brand" routerLink="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
         alt="Afriland First Bank">Afriland First Bank</a>
     <div class="welcome-copy">
-      <h1>Activez votre accès au service WhatsApp</h1>
-      <p>Un parcours simple et sécurisé pour vérifier votre identité bancaire.</p>
+      <h1>{{ lang.t('Activez votre accès au service WhatsApp', 'Activate your WhatsApp banking access') }}</h1>
+      <p>{{ lang.t('Un parcours simple et sécurisé pour vérifier votre identité bancaire.', 'A simple, secure journey
+        to verify your banking identity.') }}</p>
       <ul>
-        <li><b>01</b> Vérification de votre compte</li>
-        <li><b>02</b> Création de votre code PIN</li>
-        <li><b>03</b> Validation de votre accès</li>
+        <li><b>01</b> {{ lang.t('Vérification de votre compte', 'Account verification') }}</li>
+        <li><b>02</b> {{ lang.t('Création de votre code PIN', 'PIN code creation') }}</li>
+        <li><b>03</b> {{ lang.t('Validation de votre accès', 'Access validation') }}</li>
       </ul>
     </div>
-    <footer>© 2026 Afriland First Bank · Confidentialité</footer>
+    <footer>© 2026 Afriland First Bank · {{ lang.t('Confidentialité', 'Privacy') }}</footer>
   </section>
   <section class="welcome-action">
-    <div class="welcome-panel"><img class="hero-logo" src="afriland-first-bank-logo.png" alt="">
-      <h2>Bienvenue</h2>
-      <p>Munissez-vous de votre numéro de compte Afriland First Bank pour commencer.</p><a class="primary-button"
-        routerLink="/onboarding/account-verification">Commencer l’onboarding <span>→</span></a><small>Votre accès est
-        sécurisé et vos données sont protégées.</small>
+    <div class="welcome-panel">
+      <button type="button" class="lang-switch" (click)="lang.toggle()">{{ lang.isEnglish() ? 'Français' : 'English'
+        }}</button>
+      <img class="hero-logo" src="afriland-first-bank-logo.png" alt="">
+      @if (knownName()) {
+      <h2>{{ lang.t('Bonjour', 'Hello') }} {{ knownName() }}</h2>
+      } @else {
+      <h2>{{ lang.t('Bienvenue', 'Welcome') }}</h2>
+      }
+      <p>{{ lang.t('Munissez-vous de votre numéro de compte Afriland First Bank pour commencer.', 'Have your Afriland
+        First Bank account number ready to begin.') }}</p><a class="primary-button"
+        routerLink="/onboarding/account-verification">{{ lang.t('Commencer l’onboarding', 'Start onboarding') }}
+        <span>→</span></a><small>{{ lang.t('Votre accès est sécurisé et vos données sont protégées.', 'Your access is
+        secure and your data is protected.') }}</small>
     </div>
   </section>
 </main>
