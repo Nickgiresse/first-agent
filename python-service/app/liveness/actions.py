@@ -57,24 +57,29 @@ def _verify_head_turn(action: str, frames: list[FrameAnalysis], settings: Settin
     plutôt qu'à un angle absolu : reste correct quelle que soit la position de départ de la
     personne face à la caméra.
 
-    Convention de signe (delta_yaw < 0 = gauche, > 0 = droite) déduite de la décomposition de
-    matrice de rotation standard, vérifiée seulement sur une pose neutre pour l'instant — à
-    confirmer sur un vrai mouvement de tête réel, et inverser ici si les tests montrent l'inverse.
+    Convention de signe (delta_yaw < 0 = droite, > 0 = gauche) : la décomposition de matrice de
+    rotation standard supposait l'inverse (delta < 0 = gauche), mais un test réel avec caméra
+    frontale (2026-07-31) a montré que le résultat était inversé par rapport à la consigne
+    affichée à l'utilisateur — corrigé ici en conséquence, comme anticipé dans le commentaire
+    d'origine ("inverser si les tests montrent l'inverse").
     """
     baseline_yaw = frames[0].yawDegrees
     deltas = [f.yawDegrees - baseline_yaw for f in frames[1:]]
     if action == "TURN_LEFT":
-        return any(delta <= -settings.head_turn_threshold_degrees for delta in deltas)
-    return any(delta >= settings.head_turn_threshold_degrees for delta in deltas)
+        return any(delta >= settings.head_turn_threshold_degrees for delta in deltas)
+    return any(delta <= -settings.head_turn_threshold_degrees for delta in deltas)
 
 
 def _verify_head_pitch(action: str, frames: list[FrameAnalysis], settings: Settings) -> bool:
-    """Même principe que _verify_head_turn, appliqué au tangage (pitch) pour lever/baisser la tête."""
+    """Même principe que _verify_head_turn, appliqué au tangage (pitch) pour lever/baisser la tête.
+
+    Convention de signe inversée par rapport à l'hypothèse initiale, pour la même raison que
+    _verify_head_turn (confirmé sur un vrai test caméra le 2026-07-31)."""
     baseline_pitch = frames[0].pitchDegrees
     deltas = [f.pitchDegrees - baseline_pitch for f in frames[1:]]
     if action == "LOOK_UP":
-        return any(delta >= settings.head_pitch_threshold_degrees for delta in deltas)
-    return any(delta <= -settings.head_pitch_threshold_degrees for delta in deltas)
+        return any(delta <= -settings.head_pitch_threshold_degrees for delta in deltas)
+    return any(delta >= settings.head_pitch_threshold_degrees for delta in deltas)
 
 
 def score_for_action(action: str, frames: list[FrameAnalysis]) -> list[float]:

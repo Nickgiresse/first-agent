@@ -20,10 +20,10 @@ spring:
     baseline-on-migrate: true
 
   mail:
-    host: smtp.resend.com
-    port: 587
-    username: resend
-    password: ${RESEND_API_KEY}
+    host: ${MAIL_HOST:smtp.office365.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:agent_dri_03@afrilandfirstbank.com}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -44,7 +44,7 @@ app:
   storage:
     upload-dir: ./uploads
   mail:
-    from-address: onboarding@resend.dev
+    from-address: ${MAIL_FROM_ADDRESS:agent_dri_03@afrilandfirstbank.com}
   jwt:
     secret: ${JWT_SECRET}
   # Microservice Python de vision (OCR, visage, vivacité, comparaison biométrique) — remplace

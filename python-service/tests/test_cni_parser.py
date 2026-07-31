@@ -74,3 +74,82 @@ def test_value_on_same_line_as_label_is_captured():
 
     text_lastname = "NOM/NAME: MBALLA"
     assert parse_cni_fields(text_lastname).lastName == "MBALLA"
+
+
+# Transcription propre (non bruitée) d'une vraie CNI définitive camerounaise (recto+verso),
+# fournie par l'utilisateur le 2026-07-31 — première calibration de ce parseur sur un document
+# réel (contrairement au titre provisoire/récépissé, voir provisional_receipt_parser.py et
+# receipt_parser.py, qui disposaient déjà d'échantillons réels). A révélé 3 écarts corrigés dans
+# cni_parser.py : libellés bilingues à matcher en entier, sexe partageant sa ligne avec la taille,
+# et absence de tout libellé "N° CNI" (numéro nu, sans étiquette, au bas du verso).
+REAL_CNI_TEXT = """
+RÉPUBLIQUE DU CAMEROUN
+REPUBLIC OF CAMEROON
+CARTE NATIONALE D'IDENTITE
+NATIONAL IDENTITY CARD
+NOM/SURNAME
+DONGMO DJOUAKA
+PRÉNOMS/GIVEN NAMES
+BRYAN
+DATE DE NAISSANCE/DATE OF BIRTH
+22.10.2005
+LIEU DE NAISSANCE/PLACE OF BIRTH
+DOUALA
+SEXE/SEX          TAILLE/HEIGHT
+M                 1,86
+PROFESSION/OCCUPATION
+ELEVE
+PÈRE/FATHER
+DJOUAKA ALAIN ROGER
+MÈRE/MOTHER
+KIFACK BOUKENG FLORENCE
+S.P./S.M.
+850000
+ADRESSE/ADDRESS
+DLA-BONAMOUSSAD
+I 694749247
+AUTORITÉ/AUTHORITY
+DATE DE DÉLIVRANCE/DATE OF ISSUE
+17.05.2022
+DATE D'EXPIRATION/DATE OF EXPIRY
+17.05.2032
+POSTE D'IDENTIFICATION/IDENTIFICATION POST
+CE01
+IDENTIFIANT UNIQUE/UNIQUE IDENTIFIER
+20220101224610554
+Martin MBARGA NGUÉLÉ
+CAMEROUN CAMEROON
+500018807
+"""
+
+
+def test_real_cni_extracts_names_correctly():
+    fields = parse_cni_fields(REAL_CNI_TEXT)
+    assert fields.lastName == "DONGMO DJOUAKA"
+    assert fields.firstName == "BRYAN"
+
+
+def test_real_cni_extracts_sex_despite_sharing_line_with_height_label():
+    # Régression : "SEXE/SEX" et "TAILLE/HEIGHT" sont sur la même ligne sur ce document réel ;
+    # la valeur "M" est sur la ligne suivante, mélangée à la valeur de la taille.
+    fields = parse_cni_fields(REAL_CNI_TEXT)
+    assert fields.sex == "M"
+
+
+def test_real_cni_extracts_birth_date_and_place():
+    fields = parse_cni_fields(REAL_CNI_TEXT)
+    assert fields.birthDate == date(2005, 10, 22)
+    assert fields.birthPlace == "DOUALA"
+
+
+def test_real_cni_extracts_expiry_date_from_bilingual_label():
+    fields = parse_cni_fields(REAL_CNI_TEXT)
+    assert fields.expiryDate == date(2032, 5, 17)
+
+
+def test_real_cni_document_number_prefers_standalone_line_over_other_digit_sequences():
+    # Régression : le texte contient aussi "694749247" (numéro d'adresse) et "850000" (S.P./S.M.),
+    # qui apparaissent avant le vrai numéro de carte "500018807" dans le flux de texte — sans le
+    # correctif, la recherche naïve du premier nombre à 9-12 chiffres retournait le mauvais numéro.
+    fields = parse_cni_fields(REAL_CNI_TEXT)
+    assert fields.documentNumber == "500018807"
