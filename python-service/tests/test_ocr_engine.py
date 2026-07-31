@@ -20,3 +20,15 @@ def test_extract_words_returns_confidence_scores(text_image_factory):
     assert len(words) >= 1
     assert all(0 <= w.confidence <= 100 for w in words)
     assert any("JEAN" in w.text.upper() for w in words)
+
+
+def test_extract_text_reads_text_over_gradient_and_guilloche_pattern(patterned_text_image_factory):
+    # Reproduit (en synthétique) le problème signalé sur les vraies CNI camerounaises : bandes de
+    # couleur en dégradé + fond guilloché derrière le texte (voir _flatten_background dans
+    # preprocessing.py). Ne remplace pas un vrai test sur une photo réelle dégradée.
+    image = patterned_text_image_factory("NKENG")
+    preprocessed = preprocess_for_ocr(image)
+
+    text = extract_text(preprocessed)
+
+    assert "NKENG" in text.upper()
