@@ -1,0 +1,131 @@
+.welcome {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 42% 58%
+}
+
+.welcome-info {
+    padding: 50px;
+    background: #f4f5f7;
+    display: flex;
+    flex-direction: column
+}
+
+.welcome-copy {
+    margin: auto 0
+}
+
+.welcome-copy h1 {
+    font: 800 clamp(36px, 4vw, 56px)/1.08 var(--font-display);
+    letter-spacing: -.05em;
+    max-width: 500px;
+    margin: 0 0 20px
+}
+
+.welcome-copy p {
+    color: var(--color-muted);
+    font-size: 19px;
+    max-width: 440px;
+    line-height: 1.55
+}
+
+.welcome-copy ul {
+    display: grid;
+    gap: 18px;
+    list-style: none;
+    padding: 38px 0 0;
+    margin: 0
+}
+
+.welcome-copy li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 700
+}
+
+.welcome-copy b {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-dark)
+}
+
+.welcome-info footer {
+    font-size: 13px;
+    color: var(--color-muted)
+}
+
+.welcome-action {
+    display: grid;
+    place-items: center;
+    padding: 40px;
+    background: radial-gradient(circle at top right, #fff0f2 0, transparent 38%), #fff
+}
+
+.welcome-panel {
+    width: min(100%, 460px);
+    text-align: center
+}
+
+.hero-logo {
+    width: 146px;
+    height: 112px;
+    object-fit: contain;
+    margin-bottom: 28px
+}
+
+.welcome-panel h2 {
+    font: 800 42px/1 var(--font-display);
+    letter-spacing: -.05em;
+    margin: 0 0 15px;
+    color: var(--color-primary-dark)
+}
+
+.welcome-panel p {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--color-muted);
+    margin: 0 0 28px
+}
+
+.welcome-panel .primary-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none
+}
+
+.welcome-panel small {
+    display: block;
+    color: var(--color-muted);
+    margin-top: 28px
+}
+
+@media(max-width:800px) {
+    .welcome {
+        display: block
+    }
+
+    .welcome-info {
+        min-height: 120px;
+        padding: 24px
+    }
+
+    .welcome-copy,
+    .welcome-info footer {
+        display: none
+    }
+
+    .welcome-action {
+        min-height: calc(100dvh - 91px);
+        padding: 28px
+    }
+
+    .hero-logo {
+        margin-top: 0
+    }
+}

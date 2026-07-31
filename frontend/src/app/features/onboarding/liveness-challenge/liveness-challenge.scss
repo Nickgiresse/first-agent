@@ -1,0 +1,59 @@
+:host {
+    display: block
+}
+
+.liveness-viewport {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 1 / 1;
+    margin: 14px auto;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #000
+}
+
+.liveness-viewport video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1) /* effet miroir, plus naturel pour une caméra frontale */
+}
+
+.liveness-instruction {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12px;
+    margin: 0 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    font-weight: 700;
+    text-align: center
+}
+
+.liveness-instruction.pulsing {
+    animation: liveness-pulse 1s ease-in-out infinite
+}
+
+@keyframes liveness-pulse {
+    0%, 100% { opacity: 1 }
+    50% { opacity: .55 }
+}
+
+.liveness-progress {
+    margin: 4px 0 14px;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    text-align: center
+}
+
+.liveness-status {
+    min-height: 24px;
+    margin: 6px 0 18px;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    text-align: center
+}

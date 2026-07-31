@@ -1,0 +1,21 @@
+<main class="journey">
+    <aside class="journey-aside"><a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
+                alt="">Afriland First Bank</a>
+        <h1>Justificatif d’identité</h1>
+        <p>Déposez les deux faces de votre CNI pour finaliser la vérification.</p>
+    </aside>
+    <section class="journey-main">
+        <div class="form-shell">
+            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
+            <h2>Ajoutez votre une Piece d'Identité</h2>
+            <p class="lead">Formats acceptés : JPG ou PNG, 5 Mo maximum par fichier.</p><label class="upload-zone"
+                [class.done]="front()"><input type="file" accept="image/jpeg,image/png"
+                    (change)="pick($event,'front')"><b>Recto de la CNI</b><span>{{front()?.name || 'Choisir un
+                    fichier'}}</span></label><label class="upload-zone" [class.done]="back()"><input type="file"
+                    accept="image/jpeg,image/png" (change)="pick($event,'back')"><b>Verso de la
+                    CNI</b><span>{{back()?.name || 'Choisir un fichier'}}</span></label>@if(error()){<span
+                class="form-error">{{error()}}</span>}<button class="primary-button" type="button"
+                [disabled]="!front()||!back()||sending()" (click)="submit()">{{sending()?'Envoi…':'Continuer'}}</button>
+        </div>
+    </section>
+</main>

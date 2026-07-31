@@ -1,0 +1,36 @@
+<main class="journey">
+    <aside class="journey-aside">
+        <a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png" alt="">Afriland First Bank</a>
+        <h1>Scan de votre pièce d’identité</h1>
+        <p>Présentez votre CNI face à la caméra. La capture se déclenche automatiquement dès que l’image est nette et bien cadrée.</p>
+    </aside>
+    <section class="journey-main">
+        <div class="form-shell">
+            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
+            <h2>{{ step() === 'BACK' ? 'Présentez le verso' : 'Présentez le recto' }}</h2>
+            <p class="lead">Document bien à plat, sans reflet, entièrement visible dans le cadre.</p>
+
+            @if (step() !== 'UPLOADING') {
+                <div class="scan-viewport">
+                    <video #videoRef autoplay playsinline muted></video>
+                    <div class="scan-frame"></div>
+                </div>
+                <canvas #analysisCanvas width="200" height="130" hidden></canvas>
+                <p class="scan-feedback" aria-live="polite">{{ feedbackMessage() }}</p>
+            } @else {
+                <div class="scan-uploading" aria-live="polite">{{ feedbackMessage() }}</div>
+            }
+
+            @if (cameraError()) {
+                <span class="form-error">{{ cameraError() }}</span>
+            }
+            @if (error()) {
+                <span class="form-error">{{ error() }}</span>
+            }
+
+            <button class="secondary-button" type="button" (click)="useManualUpload()">
+                <span class="text-black">Vous ne pouvez pas utiliser la caméra ?</span> Téléversez une photo
+            </button>
+        </div>
+    </section>
+</main>

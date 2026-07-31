@@ -1,0 +1,57 @@
+<main class="journey">
+    <aside class="journey-aside"><a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
+                alt="">Afriland First Bank</a>
+        <h1>Votre identité est confirmée.</h1>
+        <p>Les informations affichées proviennent de votre compte bancaire.</p>
+    </aside>
+    <section class="journey-main">
+        <div class="form-shell">
+            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
+            <div class="progress-meta"><span>Étape 2 sur 3</span><span>66 % complété</span></div>
+            <div class="progress"><span style="width:66%"></span></div>
+            <h2>Confirmez vos informations</h2>
+            <p class="lead">Votre prénom et votre nom ont été récupérés automatiquement.</p>
+            <div class="identity-card"><span>Prénom</span><strong>{{ firstName() }}</strong></div>
+            <div class="identity-card"><span>Nom</span><strong>{{ lastName() }}</strong></div>
+
+            @if (phase() === 'EMAIL') {
+                <label class="field-label" for="email">Adresse e-mail</label>
+                <input class="text-field" id="email" type="email" autocomplete="email" placeholder="vous@exemple.com"
+                    [formControl]="email">
+                @if (email.touched && email.invalid) {
+                    <span class="form-error">Saisissez une adresse e-mail valide.</span>
+                }
+                @if (error()) {
+                    <span class="form-error">{{ error() }}</span>
+                }
+                <button class="primary-button" type="button" (click)="requestCode()"
+                    [disabled]="email.invalid || submitting()">{{ submitting() ? 'Envoi…' : 'Recevoir le code par e-mail' }}</button>
+
+                <div class="otp-actions">
+                    <button type="button" class="link-button" (click)="skipEmail()" [disabled]="submitting()">Continuer sans e-mail (envoi temporairement indisponible)</button>
+                </div>
+            } @else {
+                <p class="lead">Un code à 6 chiffres a été envoyé à <strong>{{ email.value }}</strong>. Saisissez-le
+                    ci-dessous pour continuer.</p>
+                <label class="field-label" for="code">Code de vérification</label>
+                <input class="text-field" id="code" type="text" inputmode="numeric" autocomplete="one-time-code"
+                    maxlength="6" placeholder="______" [formControl]="code" (input)="digitsOnly()">
+                @if (code.touched && code.invalid) {
+                    <span class="form-error">Saisissez le code à 6 chiffres reçu par e-mail.</span>
+                }
+                @if (error()) {
+                    <span class="form-error">{{ error() }}</span>
+                }
+                <button class="primary-button" type="button" (click)="verifyCode()"
+                    [disabled]="code.invalid || submitting()">{{ submitting() ? 'Vérification…' : 'Vérifier le code' }}</button>
+
+                <div class="otp-actions">
+                    <button type="button" class="link-button" (click)="resendCode()" [disabled]="cooldownRemaining() > 0 || submitting()">
+                        {{ cooldownRemaining() > 0 ? 'Renvoyer le code (' + cooldownRemaining() + 's)' : 'Renvoyer le code' }}
+                    </button>
+                    <button type="button" class="link-button" (click)="changeEmail()">Modifier l'adresse e-mail</button>
+                </div>
+            }
+        </div>
+    </section>
+</main>
