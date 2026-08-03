@@ -13,6 +13,12 @@
             @if (loading()) {
                 <p>Chargement des données extraites…</p>
             } @else {
+                @if (confidenceScore() !== null || qualityScore() !== null) {
+                    <div style="margin-bottom: 16px; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #475569;">
+                        🔍 <b>Qualité document :</b> {{ qualityScore() }}% &nbsp;|&nbsp; <b>Confiance extraction :</b> {{ confidenceScore() }}%
+                    </div>
+                }
+
                 <label class="field-label" for="firstName">Prénom</label>
                 <input id="firstName" class="text-field" type="text" formControlName="firstName">
 

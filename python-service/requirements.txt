@@ -21,5 +21,11 @@ Pillow==12.3.0
 # de mediapipe — même piège que EasyOCR). Modèle w600k_r50.onnx téléchargé séparément (voir README).
 onnxruntime==1.28.0
 
+# Passeport : parsing + validation des chiffres de contrôle de la zone MRZ (ICAO 9303). Pure
+# Python, aucune dépendance, ne touche jamais aux images (on continue de lire le texte de la MRZ
+# via Tesseract comme le reste) — donc aucun risque de conflit opencv contrairement à EasyOCR/
+# PassportEye (qui embarquent leur propre pipeline d'image).
+mrz==0.6.2
+
 pytest==8.3.4
 httpx==0.28.1

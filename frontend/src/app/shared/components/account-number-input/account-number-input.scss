@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.account-number-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  outline: none;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-color, #111827);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    border-color: var(--primary-color, #0284c7);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+    letter-spacing: 0.05em;
+  }
+
+  &:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+  }
+}

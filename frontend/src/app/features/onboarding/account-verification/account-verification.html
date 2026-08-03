@@ -28,13 +28,17 @@
             <h2>Vérifions votre numéro de compte</h2>
             <p class="lead">Saisissez les 18 derniers chiffres. Le préfixe Afriland First Bank est déjà renseigné.</p>
             <label class="field-label" for="accountSuffix">Numéro de compte</label>
-            <div class="account-field"><span class="account-prefix">10005</span>
-                <input id="accountSuffix" type="text"
-                    inputmode="numeric" autocomplete="off" maxlength="18" placeholder="_____ ___________ __"
-                    (input)="onInput($event)" (blur)="touched.set(true)"></div>
-            <p class="account-mask" aria-hidden="true">10005 {{ displayValue() }}</p>
-            <span class="field-help">Format complet : 10005
-                _____ ___________ __</span>@if (touched() && !valid()) { <span class="form-error">Veuillez
+            <div class="account-field">
+                <span class="account-prefix">10005</span>
+                <app-account-number-input
+                    [value]="digits()"
+                    (valueChange)="onAccountDigitsChange($event)"
+                    (blur)="touched.set(true)"
+                    placeholder="12345 67890123456 78">
+                </app-account-number-input>
+            </div>
+            <span class="field-help">Format complet : 10005 12345 67890123456 78</span>
+@if (touched() && !valid()) { <span class="form-error">Veuillez
                 saisir exactement 18 chiffres.</span> } @if (error()) { <span class="form-error">{{ error() }}</span>
             }<button class="primary-button" type="button" (click)="submit()"
                 [disabled]="!valid() || submitting()">{{ submitting() ? 'Vérification…' : 'Continuer' }}</button>
