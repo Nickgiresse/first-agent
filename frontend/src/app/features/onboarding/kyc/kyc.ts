@@ -4,6 +4,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { OnboardingState } from '../../../core/services/onboarding-state';
+import { LanguageService } from '../../../core/services/language';
 
 type Phase = 'EMAIL' | 'OTP';
 
@@ -11,6 +12,8 @@ const RESEND_COOLDOWN_SECONDS = 45;
 
 @Component({ selector: 'app-kyc', imports: [ReactiveFormsModule], templateUrl: './kyc.html', styleUrl: './kyc.scss' })
 export class Kyc {
+  readonly lang = inject(LanguageService);
+
   private readonly state = inject(OnboardingState);
   private readonly service = inject(OnboardingService);
   private readonly router = inject(Router);
@@ -72,19 +75,8 @@ export class Kyc {
     this.requestCode();
   }
 
-  // Contournement temporaire tant que l'envoi d'e-mail (SMTP) est en panne.
-  skipEmail(): void {
-    if (this.submitting()) return;
-    this.submitting.set(true);
-    this.error.set(null);
-    this.service.skipEmailVerification().subscribe({
-      next: () => this.router.navigateByUrl('/onboarding/pin-creation'),
-      error: err => {
-        this.error.set(err?.message ?? err?.error?.message ?? 'Impossible de continuer sans e-mail.');
-        this.submitting.set(false);
-      }
-    });
-  }
+  // skipEmail retiré : l'envoi d'e-mail fonctionne, seule la variable
+  // MAIL_PASSWORD n'était pas renseignée côté backend.
 
   changeEmail(): void {
     this.phase.set('EMAIL');

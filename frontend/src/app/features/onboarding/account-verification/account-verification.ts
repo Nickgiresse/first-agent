@@ -12,6 +12,8 @@ import { AccountNumberInput } from '../../../shared/components/account-number-in
   styleUrl: './account-verification.scss'
 })
 export class AccountVerification {
+  readonly lang = inject(LanguageService);
+
   private readonly accountService = inject(AccountService);
   private readonly state = inject(OnboardingState);
   private readonly router = inject(Router);

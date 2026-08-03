@@ -5,6 +5,7 @@ import { CameraService } from '../../../core/services/camera';
 import { DocumentService } from '../../../core/services/document';
 import { computeCoverSourceRect } from '../../../core/services/image-quality-analyzer';
 import { LIVENESS_ACTION_LABELS, LivenessAction } from '../../../core/models/liveness.model';
+import { LanguageService } from '../../../core/services/language';
 
 type Phase = 'LOADING' | 'READY' | 'CAPTURING' | 'VERIFYING' | 'RETRY' | 'FINALIZING' | 'ERROR';
 
@@ -20,6 +21,8 @@ const CAPTURE_SIZE = 480; // carré, suffisant pour un visage
   styleUrl: './liveness-challenge.scss'
 })
 export class LivenessChallenge {
+  readonly lang = inject(LanguageService);
+
   private readonly camera = inject(CameraService);
   private readonly docs = inject(DocumentService);
   private readonly router = inject(Router);

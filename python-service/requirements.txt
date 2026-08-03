@@ -10,10 +10,17 @@ numpy==2.5.1
 # (les trois variantes s'installent sous le même module `cv2`).
 mediapipe==0.10.35
 
-# OCR : wrapper Python pur pour le binaire Tesseract (installé séparément au niveau système,
-# voir README). Choisi pour le Module 2 car PaddleOCR (paddlepaddle) n'a pas encore de wheel
-# Python 3.14 et EasyOCR duplique opencv-contrib-python (cf. mémo mediapipe ci-dessus).
-pytesseract==0.3.13
+# OCR : RapidOCR (moteur PP-OCRv4 en ONNX Runtime pur), fusion « best of both »
+# portée du WhatsApp banking — bien plus précis que Tesseract sur photo de CNI, et
+# sans binaire système à installer (modèles embarqués dans le wheel + modèle latin
+# optionnel dans weights/ocr_models/). Réutilise l'onnxruntime déjà présent.
+#
+# ⚠️ CONFLIT OPENCV À SURVEILLER À L'INSTALL : rapidocr_onnxruntime déclare
+# opencv-python, alors que mediapipe impose opencv-contrib-python (même module cv2).
+# Installer rapidocr APRÈS mediapipe et, en cas de conflit cv2, réinstaller
+# opencv-contrib-python en dernier (superset compatible avec les deux). Version à
+# figer à l'install selon la compatibilité numpy/onnxruntime de la cible.
+rapidocr_onnxruntime>=1.3,<2.0
 Pillow==12.3.0
 
 # Module 5 : inférence ArcFace (empreinte faciale) en ONNX Runtime pur, sans le paquet pip

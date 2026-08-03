@@ -15,6 +15,16 @@ public class OnboardingController {
 
     private final OnboardingService onboardingService;
 
+    // Entrée par lien : le microservice reçoit le JWT dans l'URL (?t=). Endpoint public (aucune
+    // session n'existe encore) : il valide le lien auprès du WhatsApp banking et renvoie le contexte.
+    @PostMapping("/link/verify")
+    public ResponseEntity<ApiResponse<LinkVerificationResponse>> verifyLink(
+        @Valid @RequestBody LinkVerifyRequest request
+    ) {
+        LinkVerificationResponse response = onboardingService.verifyOnboardingLink(request.getToken());
+        return ResponseEntity.ok(ApiResponse.success(response, "Lien vérifié"));
+    }
+
     @PostMapping("/kyc/otp/request")
     public ResponseEntity<ApiResponse<Void>> requestEmailOtp(
         @RequestHeader("X-Session-Token") String sessionToken,
@@ -33,14 +43,18 @@ public class OnboardingController {
         return ResponseEntity.ok(ApiResponse.success(null, "Adresse e-mail vérifiée"));
     }
 
-    // Contournement temporaire tant que l'envoi d'e-mail (SMTP) est en panne — voir OnboardingService.
-    @PostMapping("/kyc/skip")
-    public ResponseEntity<ApiResponse<Void>> skipEmailVerification(
-        @RequestHeader("X-Session-Token") String sessionToken
-    ) {
-        onboardingService.skipEmailVerification(sessionToken);
-        return ResponseEntity.ok(ApiResponse.success(null, "Étape KYC passée sans e-mail"));
-    }
+    // Le contournement /kyc/skip a été retiré. Il avait été ajouté « tant que
+    // l'envoi d'e-mail est en panne », mais l'envoi fonctionne : serveur, port
+    // et compte configurés sont corrects, et l'authentification Office 365
+    // passe depuis le poste. Seule la variable MAIL_PASSWORD n'était pas
+    // renseignée, ce qui faisait échouer le démarrage sur un placeholder non
+    // résolu et a été pris pour une panne — voir .env.example.
+    //
+    // Le conserver aurait été plus qu'une étape sautée : le bouton était offert
+    // au client dans l'interface, et rien ne distinguait un envoi réellement en
+    // échec d'un client préférant ne pas donner son adresse. Or le courriel
+    // porte les codes à usage unique et le lien de réinitialisation du PIN : un
+    // compte activé sans adresse vérifiée n'offre aucun moyen de récupération.
 
     @PostMapping("/profile")
     public ResponseEntity<ApiResponse<Void>> createProfile(
@@ -62,9 +76,10 @@ public class OnboardingController {
 
     @PostMapping("/complete")
     public ResponseEntity<ApiResponse<OnboardingCompletionResponse>> completeOnboarding(
-        @RequestHeader("X-Session-Token") String sessionToken
+        @RequestHeader("X-Session-Token") String sessionToken,
+        @RequestBody(required = false) CompleteOnboardingRequest request
     ) {
-        OnboardingCompletionResponse response = onboardingService.completeOnboarding(sessionToken);
+        OnboardingCompletionResponse response = onboardingService.completeOnboarding(sessionToken, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Onboarding terminé avec succès"));
     }
 }

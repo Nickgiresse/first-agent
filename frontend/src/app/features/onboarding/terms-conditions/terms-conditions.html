@@ -1,21 +1,141 @@
 <main class="journey">
     <aside class="journey-aside"><a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
                 alt="">Afriland First Bank</a>
-        <h1>Vous y êtes presque.</h1>
-        <p>Acceptez les conditions pour activer votre accès au service WhatsApp.</p>
+        <h1>{{ lang.t('Vous y êtes presque.', 'You’re almost there.') }}</h1>
+        <p>{{ lang.t('Acceptez les conditions pour activer votre accès au service WhatsApp.', 'Accept the terms to
+            activate your WhatsApp banking access.') }}</p>
     </aside>
     <section class="journey-main">
         <div class="form-shell">
-            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
-            <h2>Conditions d’utilisation</h2>
-            <p class="lead">Veuillez prendre connaissance des conditions du service avant de finaliser votre
-                inscription.</p>
-            <article class="terms">Vos données sont traitées afin de vous identifier et de sécuriser votre accès. Le
-                service WhatsApp reste soumis aux conditions d’utilisation d’Afriland First Bank.</article><label
-                class="consent"><input type="checkbox" [checked]="accepted()"
-                    (change)="accepted.set(!accepted())"><span>J’accepte les conditions d’utilisation et la politique de
-                    confidentialité.</span></label><button class="primary-button" [disabled]="!accepted()||busy()"
-                (click)="submit()">{{busy()?'Activation…':'Activer mon accès'}}</button>
+            <button type="button" class="back-link" (click)="goBack()">← {{ lang.t('Retour', 'Back') }}</button>
+            <h2>{{ lang.t('Conditions d’utilisation', 'Terms of use') }}</h2>
+            <p class="lead">{{ lang.t('Veuillez lire les conditions jusqu’au bout : les cases s’activeront ensuite.',
+                'Please read the terms to the end: the checkboxes will then become active.') }}</p>
+
+            <article class="terms" (scroll)="onTermsScroll($event)">
+                @if (lang.isEnglish()) {
+                <h3>General Terms of Use — FirstAgent (v1.0)</h3>
+                <p>FirstAgent is the WhatsApp banking service of Afriland First Bank S.A., a public limited company
+                    with share capital of 14 billion FCFA, RC/YAO/1987/B/277, registered office at 1063 avenue Joseph
+                    Mballa Eloundou, Yaoundé, a credit institution supervised by COBAC.</p>
+
+                <h4>1. Purpose</h4>
+                <p>These terms govern access to the service and its use. They apply from the opening of your access
+                    until its closure.</p>
+
+                <h4>2. Identity verification and biometric data</h4>
+                <p>To open your access, the bank verifies your identity: it reads your identity document and compares
+                    the photograph on that document with a live image of you, together with a liveness check. These
+                    operations run entirely on the bank’s own infrastructure: no image is sent to any external
+                    artificial intelligence service.</p>
+                <p>The images are used exclusively to verify your identity and to build your regulatory file. They are
+                    neither sold nor reused for any other purpose.</p>
+
+                <h4>3. Decisions and remedies</h4>
+                <p>If the verification succeeds, your access is activated. In case of doubt, your file is passed to an
+                    adviser and your access remains inactive until their decision. If the verification fails, no access
+                    is opened and you are invited to visit a branch. In all cases, you may request human intervention
+                    to review an automated decision.</p>
+
+                <h4>4. Security of your secret code</h4>
+                <p>Your PIN is entered only on a secure page and stored in encrypted form. The bank will never ask you
+                    for your PIN, a one-time code, a password or card details, whether by WhatsApp, by telephone or by
+                    email.</p>
+
+                <h4>5. Data retention</h4>
+                <p>Your customer due diligence file is kept for the duration of the relationship and for ten years
+                    after its closure. Interaction logs are kept for five years. Biometric data is kept for the time
+                    needed to build the file, in accordance with the retention policy approved by the data protection
+                    officer.</p>
+
+                <h4>6. Your rights</h4>
+                <p>You have rights of access, rectification, objection and erasure, as well as the right to withdraw
+                    your consent for the future. To exercise them, write to dpo&#64;afrilandfirstbank.com.</p>
+
+                <h4>7. Complaints and governing law</h4>
+                <p>Any complaint may be addressed to +237 222 23 30 10 or info&#64;afrilandfirstbank.com. These terms
+                    are governed by Cameroonian law and by CEMAC and COBAC regulations. The Cameroonian courts of the
+                    registered office’s jurisdiction have competence.</p>
+
+                <p class="terms-end">— End of the general terms of use —</p>
+                } @else {
+                <h3>Conditions Générales d’Utilisation — FirstAgent (v1.0)</h3>
+                <p>FirstAgent est le service bancaire par WhatsApp d’Afriland First Bank S.A., société anonyme au
+                    capital de 14 milliards de FCFA, RC/YAO/1987/B/277, siège social 1063 avenue Joseph Mballa
+                    Eloundou, Yaoundé, établissement de crédit soumis au contrôle de la COBAC.</p>
+
+                <h4>1. Objet</h4>
+                <p>Les présentes conditions régissent l’accès au service et son utilisation. Elles s’appliquent dès
+                    l’ouverture de votre accès et jusqu’à sa clôture.</p>
+
+                <h4>2. Vérification d’identité et données biométriques</h4>
+                <p>Pour ouvrir votre accès, la banque vérifie votre identité : lecture de votre pièce d’identité et
+                    comparaison entre la photo de la pièce et votre image prise en direct, accompagnée d’un contrôle
+                    de vivacité. Ces traitements s’exécutent intégralement sur l’infrastructure de la banque : aucune
+                    image n’est transmise à un service d’intelligence artificielle extérieur.</p>
+                <p>Les images servent exclusivement à vérifier votre identité et à constituer votre dossier
+                    réglementaire. Elles ne sont ni cédées, ni réutilisées à d’autres fins.</p>
+
+                <h4>3. Décisions et recours</h4>
+                <p>Si la vérification est concluante, votre accès est activé. En cas de doute, votre dossier est
+                    transmis à un conseiller et votre accès reste inactif jusqu’à sa décision. Si la vérification
+                    échoue, aucun accès n’est ouvert et vous êtes invité à vous présenter en agence. Vous pouvez, dans
+                    tous les cas, demander l’intervention d’une personne pour réexaminer une décision automatisée.</p>
+
+                <h4>4. Sécurité de votre code secret</h4>
+                <p>Votre code PIN est saisi uniquement sur une page sécurisée et conservé sous forme chiffrée. La
+                    banque ne vous demandera jamais votre code PIN, un code à usage unique, un mot de passe ou des
+                    données de carte, que ce soit par WhatsApp, par téléphone ou par courriel.</p>
+
+                <h4>5. Conservation des données</h4>
+                <p>Votre dossier de connaissance client est conservé pendant la durée de la relation et dix ans après
+                    sa clôture. Les journaux d’interaction sont conservés cinq ans. Les données biométriques sont
+                    conservées le temps nécessaire à la constitution du dossier, selon la politique de rétention
+                    validée par le délégué à la protection des données.</p>
+
+                <h4>6. Vos droits</h4>
+                <p>Vous disposez de droits d’accès, de rectification, d’opposition et d’effacement, ainsi que du droit
+                    de retirer votre consentement pour l’avenir. Pour les exercer, écrivez à
+                    dpo&#64;afrilandfirstbank.com.</p>
+
+                <h4>7. Réclamations et droit applicable</h4>
+                <p>Toute réclamation peut être adressée au +237 222 23 30 10 ou à info&#64;afrilandfirstbank.com. Les
+                    présentes conditions sont soumises au droit camerounais ainsi qu’à la réglementation CEMAC et
+                    COBAC. Les juridictions camerounaises du ressort du siège social sont compétentes.</p>
+
+                <p class="terms-end">— Fin des conditions générales d’utilisation —</p>
+                }
+            </article>
+
+            @if (!scrolledToEnd()) {
+            <p class="scroll-hint">{{ lang.t('Faites défiler le texte jusqu’à la fin pour pouvoir accepter.', 'Scroll
+                the text to the end to be able to accept.') }}</p>
+            }
+
+            <label class="consent"><input type="checkbox" [checked]="accepted()" [disabled]="!scrolledToEnd()"
+                    (change)="accepted.set(!accepted())"><span>{{ lang.t('J’ai lu et j’accepte les conditions
+                    générales d’utilisation et la politique de confidentialité.', 'I have read and accept the general
+                    terms of use and the privacy policy.') }}</span></label>
+
+            <label class="consent"><input type="checkbox" [checked]="biometricConsent()" [disabled]="!scrolledToEnd()"
+                    (change)="biometricConsent.set(!biometricConsent())"><span>{{ lang.t('J’accepte expressément que
+                    ma photo d’identité et mon image prise en direct soient utilisées pour vérifier mon identité.', 'I
+                    expressly consent to my identity photograph and my live image being used to verify my
+                    identity.') }}</span></label>
+
+            @if (error()) {
+            <p class="form-error">{{error()}}</p>
+            }
+
+            <button class="primary-button" [disabled]="!canSubmit()"
+                (click)="submit()">{{busy()? lang.t('Activation…','Activating…') : lang.t('Activer mon accès','Activate
+                my access')}}</button>
+
+            <p class="legal-note">{{ lang.t('La banque ne vous demandera jamais votre code PIN, un code à usage unique
+                ni vos données de carte. Responsable de traitement : Afriland First Bank S.A. — contact du délégué à
+                la protection des données : dpo@afrilandfirstbank.com.', 'The bank will never ask you for your PIN, a
+                one-time code or your card details. Data controller: Afriland First Bank S.A. — data protection
+                officer contact: dpo@afrilandfirstbank.com.') }}</p>
         </div>
     </section>
 </main>

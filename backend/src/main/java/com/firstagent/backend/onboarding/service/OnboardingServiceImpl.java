@@ -28,6 +28,8 @@ import com.firstagent.backend.liveness.repository.LivenessResultRepository;
 import com.firstagent.backend.liveness.repository.StagingLivenessResultRepository;
 import com.firstagent.backend.liveness.service.LivenessService;
 import com.firstagent.backend.onboarding.dto.*;
+import com.firstagent.backend.whatsappbanking.client.WhatsAppBankingClient;
+import lombok.extern.slf4j.Slf4j;
 import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.CustomerRepository;
@@ -46,9 +48,11 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OnboardingServiceImpl implements OnboardingService {
 
@@ -77,6 +81,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final OcrService ocrService;
     private final FaceVerificationService faceVerificationService;
     private final LivenessService livenessService;
+    private final WhatsAppBankingClient whatsAppBankingClient;
 
     private final StagingDocumentRepository stagingDocumentRepository;
     private final StagingOcrResultRepository stagingOcrResultRepository;
@@ -155,18 +160,6 @@ public class OnboardingServiceImpl implements OnboardingService {
         onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
     }
 
-    @Override
-    @Transactional
-    public void skipEmailVerification(String sessionToken) {
-        OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
-
-        if (session.getStatus() != OnboardingStatus.ACCOUNT_VERIFIED) {
-            throw new BusinessException("Étape KYC déjà complétée ou non accessible à ce stade");
-        }
-
-        onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
-    }
-
     private String generateOtpCode() {
         int bound = (int) Math.pow(10, OTP_LENGTH);
         return String.format("%0" + OTP_LENGTH + "d", OTP_RANDOM.nextInt(bound));
@@ -229,6 +222,27 @@ public class OnboardingServiceImpl implements OnboardingService {
         onboardingSessionService.updateStatus(session, OnboardingStatus.TERMS_ACCEPTED);
     }
 
+    /** Entrée par lien : valide le JWT (?t=) auprès du WhatsApp banking et renvoie le contexte. */
+    @Override
+    public LinkVerificationResponse verifyOnboardingLink(String token) {
+        Map<String, Object> node = whatsAppBankingClient.verifyToken(token);
+        if (node == null || !Boolean.TRUE.equals(node.get("valid"))) {
+            throw new BusinessException("Lien invalide, expiré ou déjà utilisé.");
+        }
+        return LinkVerificationResponse.builder()
+            .valid(true)
+            .phone(asText(node.get("phone"), ""))
+            .name(asText(node.get("name"), ""))
+            .accountNumber(asText(node.get("account_number"), ""))
+            .lang(asText(node.get("lang"), "fr"))
+            .alreadyOnboarded(node.get("known_customer") != null)
+            .build();
+    }
+
+    private static String asText(Object value, String fallback) {
+        return value == null ? fallback : String.valueOf(value);
+    }
+
     /**
      * Seul point d'écriture des tables définitives (customers, customer_documents,
      * document_ocr_results, face_verification_results, liveness_results) : tout ce qui précède
@@ -237,7 +251,7 @@ public class OnboardingServiceImpl implements OnboardingService {
      */
     @Override
     @Transactional
-    public OnboardingCompletionResponse completeOnboarding(String sessionToken) {
+    public OnboardingCompletionResponse completeOnboarding(String sessionToken, CompleteOnboardingRequest request) {
         OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
 
         if (session.getStatus() != OnboardingStatus.TERMS_ACCEPTED) {
@@ -274,6 +288,12 @@ public class OnboardingServiceImpl implements OnboardingService {
             .build();
 
         applyManualReview(customer, stagingOcr.getDocumentQualityScore(), stagingFace.getTargetQualityScore());
+
+        // Source de vérité = WhatsApp banking. On y pousse le client AVANT toute écriture locale :
+        // fail-secure — si l'écriture dans la source de vérité échoue, la transaction (@Transactional)
+        // est annulée, rien n'est enregistré localement et le staging reste intact pour un nouvel essai.
+        pushToWhatsAppBanking(session, customer, stagingOcr, stagingFace, request);
+
         customerRepository.save(customer);
 
         for (StagingDocument staged : stagingDocuments) {
@@ -346,6 +366,40 @@ public class OnboardingServiceImpl implements OnboardingService {
             .message(message)
             .requiresManualReview(customer.isRequiresManualReview())
             .build();
+    }
+
+    /**
+     * Pousse le client onboardé vers le WhatsApp banking (source de vérité) via l'API M2M à clé.
+     * MATCH (dossier propre) => compte actif ; REVIEW (révision manuelle requise) => compte suspendu.
+     * NO_MATCH n'atteint jamais ce point : un échec de vérification faciale bloque la finalisation en
+     * amont (le statut face doit être VERIFIED pour arriver ici).
+     *
+     * Sans lien ni PIN (parcours interne de test non initié par un lien d'onboarding), le push est
+     * ignoré et la finalisation reste locale.
+     */
+    private void pushToWhatsAppBanking(
+        OnboardingSession session, Customer customer,
+        StagingOcrResult stagingOcr, StagingFaceVerificationResult stagingFace,
+        CompleteOnboardingRequest request
+    ) {
+        if (request == null
+            || request.getLinkToken() == null || request.getLinkToken().isBlank()
+            || request.getPin() == null || request.getPin().isBlank()) {
+            log.warn("Finalisation sans lien/PIN : push vers le WhatsApp banking ignoré (parcours interne).");
+            return;
+        }
+        String decision = customer.isRequiresManualReview() ? "REVIEW" : "MATCH";
+        String name = (customer.getFirstName() + " " + customer.getLastName()).trim();
+        String accountNumber = session.getBankAccount().getAccountNumber();
+        String docType = stagingOcr.getDocumentKind() != null ? stagingOcr.getDocumentKind().toString() : null;
+
+        // Lève une BusinessException si l'écriture échoue -> rollback @Transactional (fail-secure).
+        whatsAppBankingClient.upsertCustomer(
+            request.getLinkToken(), name, accountNumber, request.getPin(),
+            decision, stagingFace.getSimilarityScore(), stagingOcr.getDocumentNumber(), docType,
+            true, null
+        );
+        log.info("Client poussé vers le WhatsApp banking (décision={}, compte={})", decision, accountNumber);
     }
 
     /**

@@ -17,6 +17,30 @@ from app.utils.image_io import decode_image
 _PALE_DOCUMENT_KINDS = (DocumentKind.RECEPISSE, DocumentKind.TITRE_PROVISOIRE)
 
 
+def _lire_au_mieux(image_bgr, settings: Settings):
+    """Lit une face en essayant les deux préparations, et garde la meilleure.
+
+    Le prétraitement est calibré pour Tesseract : niveaux de gris, fond aplati,
+    agrandissement. Mesuré sur trois CNI réelles avec RapidOCR, il aide sur
+    deux d'entre elles (636 caractères contre 601) et nuit franchement sur la
+    troisième (408 contre 594, soit 3 champs extraits au lieu de 6). Aucune
+    des deux préparations ne l'emporte partout, et rien dans l'image ne permet
+    de deviner à l'avance laquelle conviendra : on lit donc les deux et on
+    retient la plus riche.
+
+    Le volume de texte sert d'arbitre. C'est grossier mais fiable ici : les
+    échecs observés sont massifs, une préparation inadaptée fait perdre un
+    tiers du texte, pas quelques caractères.
+    """
+    meilleur_texte, meilleurs_mots = "", []
+    for image in (preprocess_for_ocr(image_bgr), image_bgr):
+        texte = extract_text(image, settings)
+        if len(texte) > len(meilleur_texte):
+            meilleur_texte = texte
+            meilleurs_mots = extract_words(image, settings)
+    return meilleur_texte, meilleurs_mots
+
+
 def extract_document_fields(
     front_bytes: bytes, back_bytes: bytes | None = None, settings: Settings | None = None
 ) -> DocumentExtractResponse:

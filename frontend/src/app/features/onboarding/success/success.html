@@ -15,8 +15,10 @@
     <section>
         <img src="afriland-first-bank-logo.png" alt="Afriland First Bank">
         <div class="check">✓</div>
-        <h1>Vous avez créé votre compte !</h1>
-        <p>Votre inscription est terminée. Vous pouvez maintenant poursuivre vos échanges via WhatsApp.</p>
-        <a class="primary-button" [href]="whatsappUrl" target="_blank" rel="noopener">Retour au chat WhatsApp</a>
+        <h1>{{ lang.t('Vous avez créé votre compte !', 'Your account has been created!') }}</h1>
+        <p>{{ lang.t('Votre inscription est terminée. Vous pouvez maintenant poursuivre vos échanges via WhatsApp.',
+            'Your registration is complete. You can now continue the conversation on WhatsApp.') }}</p>
+        <a class="primary-button" [href]="whatsappUrl" target="_blank" rel="noopener">{{ lang.t('Retour au chat
+            WhatsApp', 'Back to WhatsApp chat') }}</a>
     </section>
 </main>
