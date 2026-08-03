@@ -1,0 +1,14 @@
+<input
+  #inputRef
+  type="text"
+  inputmode="numeric"
+  autocomplete="off"
+  maxlength="20"
+  [placeholder]="placeholder"
+  [disabled]="disabled"
+  [value]="formattedValue"
+  (input)="onInput($event)"
+  (paste)="onPaste($event)"
+  (blur)="handleBlur()"
+  class="account-number-input"
+/>

@@ -41,6 +41,8 @@ export class DocumentOcrReview implements OnInit {
     paymentDate: new FormControl('', { nonNullable: true })
   });
 
+  readonly confidenceScore = signal<number | null>(null);
+  readonly qualityScore = signal<number | null>(null);
   readonly loading = signal(true);
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
@@ -50,6 +52,8 @@ export class DocumentOcrReview implements OnInit {
       next: response => {
         const data = response.data;
         this.documentKind.set(data.documentKind);
+        if (data.confidenceScore != null) this.confidenceScore.set(Math.round(data.confidenceScore));
+        if (data.documentQualityScore != null) this.qualityScore.set(Math.round(data.documentQualityScore));
         this.form.patchValue({
           firstName: data.firstName,
           lastName: data.lastName,

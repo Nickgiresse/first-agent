@@ -30,17 +30,21 @@
             <div class="progress-meta"><span>{{ lang.t('Étape 1 sur 3', 'Step 1 of 3') }}</span><span>{{ lang.t('33 %
                     complété', '33% complete') }}</span></div>
             <div class="progress"><span style="width:33%"></span></div>
-            <h2>{{ lang.t('Vérifions votre numéro de compte', 'Let’s verify your account number') }}</h2>
-            <p class="lead">{{ lang.t('Saisissez les 18 derniers chiffres. Le préfixe Afriland First Bank est déjà
-                renseigné.', 'Enter the last 18 digits. The Afriland First Bank prefix is already filled in.') }}</p>
-            <label class="field-label" for="accountSuffix">{{ lang.t('Numéro de compte', 'Account number') }}</label>
-            <div class="account-field"><span class="account-prefix">10005</span>
-                <input id="accountSuffix" type="text"
-                    inputmode="numeric" autocomplete="off" maxlength="20" placeholder="_____ ___________ __"
-                    (input)="onInput($event)" (blur)="touched.set(true)"></div>
-            @if (touched() && !valid()) { <span class="form-error">{{ lang.t('Veuillez
-                saisir exactement 18 chiffres.', 'Please enter exactly 18 digits.') }}</span> } @if (error()) { <span
-                class="form-error">{{ error() }}</span>
+            <h2>Vérifions votre numéro de compte</h2>
+            <p class="lead">Saisissez les 18 derniers chiffres. Le préfixe Afriland First Bank est déjà renseigné.</p>
+            <label class="field-label" for="accountSuffix">Numéro de compte</label>
+            <div class="account-field">
+                <span class="account-prefix">10005</span>
+                <app-account-number-input
+                    [value]="digits()"
+                    (valueChange)="onAccountDigitsChange($event)"
+                    (blur)="touched.set(true)"
+                    placeholder="12345 67890123456 78">
+                </app-account-number-input>
+            </div>
+            <span class="field-help">Format complet : 10005 12345 67890123456 78</span>
+@if (touched() && !valid()) { <span class="form-error">Veuillez
+                saisir exactement 18 chiffres.</span> } @if (error()) { <span class="form-error">{{ error() }}</span>
             }<button class="primary-button" type="button" (click)="submit()"
                 [disabled]="!valid() || submitting()">{{ submitting() ? lang.t('Vérification…', 'Verifying…') :
                 lang.t('Continuer', 'Continue') }}</button>

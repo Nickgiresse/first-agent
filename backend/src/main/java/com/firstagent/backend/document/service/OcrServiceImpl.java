@@ -85,10 +85,17 @@ public class OcrServiceImpl implements OcrService {
         ocrResult.setExtractedAt(LocalDateTime.now());
         ocrResult.setConfirmedAt(null);
 
+        boolean hasIssues = result.issues() != null && !result.issues().isEmpty();
         boolean lowConfidence = result.confidenceScore() < minConfidenceScore;
-        ocrResult.setStatus(lowConfidence ? OcrStatus.FAILED : OcrStatus.EXTRACTED);
+        ocrResult.setStatus((lowConfidence || hasIssues) ? OcrStatus.FAILED : OcrStatus.EXTRACTED);
 
         OcrExtractionResponse response = mapToResponse(stagingOcrResultRepository.save(ocrResult));
+
+        if (hasIssues) {
+            throw new BusinessException(
+                "Le document a été refusé pour le(s) motif(s) suivant(s) : " + String.join(" ; ", result.issues())
+            );
+        }
 
         if (lowConfidence) {
             throw new BusinessException(
