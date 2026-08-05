@@ -14,7 +14,10 @@ def _sortir_du_mode_efficacite() -> None:
 
     Un service lancé en arrière-plan et sans fenêtre y est placé d'office, et
     l'inférence ONNX s'y exécute 4 à 8 fois plus lentement : mesuré ici, une
-    CNI passait de quelques secondes à plus de 20. Sans effet hors Windows.
+    CNI passait de 10 à plus de 25 secondes. Sans effet hors Windows.
+
+    À exécuter avant tout chargement de modèle, le bridage s'appliquant au
+    processus entier.
     """
     if sys.platform != "win32":
         return

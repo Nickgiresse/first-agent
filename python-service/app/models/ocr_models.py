@@ -4,13 +4,13 @@ from pydantic import BaseModel, Field
 
 
 class ExtractedFields(BaseModel):
-    documentKind: str = Field("UNKNOWN", description="CNI | TITRE_PROVISOIRE | RECEPISSE | UNKNOWN")
+    documentKind: str = Field("UNKNOWN", description="CNI | TITRE_PROVISOIRE | RECEPISSE | PASSEPORT | UNKNOWN")
     lastName: str | None = None
     firstName: str | None = None
-    documentNumber: str | None = None  # numéro CNI (carte définitive)
+    documentNumber: str | None = None  # numéro CNI (carte définitive) ou numéro de passeport
     sex: str | None = None
     birthDate: date | None = None
-    expiryDate: date | None = None  # date d'expiration CNI, ou fin de validité du titre provisoire
+    expiryDate: date | None = None  # date d'expiration CNI/passeport, ou fin de validité du titre provisoire
     birthPlace: str | None = None
 
     # Titre d'identité provisoire uniquement :
@@ -23,6 +23,9 @@ class ExtractedFields(BaseModel):
     # Récépissé de paiement uniquement :
     paymentAmount: str | None = None
     paymentDate: date | None = None
+
+    # Passeport uniquement (extrait de la MRZ, voir passport_parser.py) :
+    nationality: str | None = None
 
 
 class DocumentExtractResponse(BaseModel):

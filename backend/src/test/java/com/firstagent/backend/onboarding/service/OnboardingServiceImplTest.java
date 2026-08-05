@@ -1,6 +1,7 @@
 package com.firstagent.backend.onboarding.service;
 
 import com.firstagent.backend.account.entity.BankAccount;
+import com.firstagent.backend.whatsappbanking.client.WhatsAppBankingClient;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.enums.LivenessStatus;
@@ -67,6 +68,7 @@ class OnboardingServiceImplTest {
     @Mock private OcrService ocrService;
     @Mock private FaceVerificationService faceVerificationService;
     @Mock private LivenessService livenessService;
+    @Mock private WhatsAppBankingClient whatsAppBankingClient;
     @Mock private StagingDocumentRepository stagingDocumentRepository;
     @Mock private StagingOcrResultRepository stagingOcrResultRepository;
     @Mock private StagingFaceVerificationResultRepository stagingFaceVerificationResultRepository;
@@ -86,7 +88,7 @@ class OnboardingServiceImplTest {
     void setUp() {
         service = new OnboardingServiceImpl(
             onboardingSessionService, customerRepository, pinService, passwordEncoder, mailSender, documentService, ocrService,
-            faceVerificationService, livenessService,
+            faceVerificationService, livenessService, whatsAppBankingClient,
             stagingDocumentRepository, stagingOcrResultRepository, stagingFaceVerificationResultRepository, stagingLivenessResultRepository,
             documentRepository, documentOcrResultRepository, faceVerificationResultRepository, livenessResultRepository,
             onboardingSessionRepository
@@ -289,7 +291,7 @@ class OnboardingServiceImplTest {
         OnboardingSession session = OnboardingSession.builder().id(sessionId).status(OnboardingStatus.PIN_CREATED).build();
         when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
 
-        assertThatThrownBy(() -> service.completeOnboarding(sessionToken))
+        assertThatThrownBy(() -> service.completeOnboarding(sessionToken, null))
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("conditions");
 
@@ -305,7 +307,7 @@ class OnboardingServiceImplTest {
         when(stagingFaceVerificationResultRepository.findByOnboardingSession_Id(sessionId)).thenReturn(Optional.of(stagedFace(session, 90.0)));
         when(stagingLivenessResultRepository.findByOnboardingSession_Id(sessionId)).thenReturn(Optional.of(stagedLiveness(session)));
 
-        OnboardingCompletionResponse response = service.completeOnboarding(sessionToken);
+        OnboardingCompletionResponse response = service.completeOnboarding(sessionToken, null);
 
         ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
         verify(customerRepository).save(customerCaptor.capture());
@@ -339,7 +341,7 @@ class OnboardingServiceImplTest {
         when(stagingFaceVerificationResultRepository.findByOnboardingSession_Id(sessionId)).thenReturn(Optional.of(stagedFace(session, 90.0)));
         when(stagingLivenessResultRepository.findByOnboardingSession_Id(sessionId)).thenReturn(Optional.of(stagedLiveness(session)));
 
-        OnboardingCompletionResponse response = service.completeOnboarding(sessionToken);
+        OnboardingCompletionResponse response = service.completeOnboarding(sessionToken, null);
 
         ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
         verify(customerRepository).save(customerCaptor.capture());

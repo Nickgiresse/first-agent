@@ -1,130 +1,210 @@
-"""Extraction de texte, avec deux moteurs interchangeables.
-
-POURQUOI DEUX MOTEURS
----------------------
-Tesseract a été retenu par défaut faute de wheel PaddleOCR pour Python 3.14.
-Mesuré sur trois CNI camerounaises réelles, il lit environ un tiers du texte
-que lit RapidOCR : 228 caractères contre 607 sur la même image. Conséquence
-directe, l'analyseur en aval ne trouve ni nom, ni prénom, ni lieu de
-naissance, alors qu'il les extrait correctement dès qu'il est alimenté par
-RapidOCR.
-
-RapidOCR devient donc le moteur par défaut. Tesseract reste sélectionnable
-par `OCR_ENGINE=tesseract`, car il n'exige aucun modèle ONNX supplémentaire
-et rend service là où l'empreinte disque compte.
 """
+app/ocr/engine.py — Moteur OCR RapidOCR (PP-OCRv4 / latin ONNX).
+
+Remplace Tesseract (fusion « best of both » : moteur porté du WhatsApp banking,
+éprouvé sur CNI camerounaises réelles). RapidOCR est un moteur de deep learning
+en ONNX Runtime, nettement plus précis que Tesseract sur photo de pièce
+d'identité. Le contrat public est INCHANGÉ — extract_words() / extract_text()
+restent consommés tels quels par cni_parser et ocr_service, sans rien modifier
+en aval.
+
+Optimisations portées du service éprouvé :
+  - chargement paresseux thread-safe du moteur (le premier chargement prend
+    quelques secondes : on ne ralentit pas le démarrage) ;
+  - verrou d'inférence unique : deux inférences ONNX concurrentes se disputent
+    les cœurs (sur-souscription intra-op) et deviennent 7 à 15x plus lentes ;
+  - opt-out EcoQoS Windows : les processus de fond sont relégués sur les cœurs
+    efficaces, bridant l'ONNX x4-8 — on s'en retire au chargement ;
+  - warmup() optionnel pour ne pas payer l'optimisation de graphe ONNX sur la
+    première vraie requête (respect du SLA KYC).
+
+Aucune image n'est conservée : tout est traité en mémoire (numpy).
+
+Modèle latin PP-OCRv3 optionnel (meilleure précision sur texte français) :
+déposer latin_PP-OCRv3_rec_infer.onnx + latin_dict.txt dans weights/ocr_models/.
+Repli automatique sur les modèles par défaut du wheel sinon.
+"""
+from __future__ import annotations
+
+import logging
 import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 
-from app.config.settings import Settings, get_settings
+from app.config.settings import Settings  # signature préservée (settings ignoré : RapidOCR gère FR/EN)
 
-_TESSDATA_DIR = Path(__file__).resolve().parent.parent.parent / "weights" / "tessdata"
+logger = logging.getLogger("ocr.engine")
 
-# Instance RapidOCR : le chargement des modèles ONNX coûte plusieurs secondes,
-# il ne doit pas être refait à chaque page.
-_rapidocr = None
+_MODEL_DIR = Path(__file__).resolve().parents[2] / "weights" / "ocr_models"
 
+_ocr = None
+_ocr_lock = threading.Lock()
+_ocr_failed = False
 
-def _get_rapidocr():
-    global _rapidocr
-    if _rapidocr is None:
-        from rapidocr_onnxruntime import RapidOCR
-        _rapidocr = RapidOCR()
-    return _rapidocr
-
-
-def _rapidocr_lines(image: np.ndarray) -> list[tuple[str, float, list]]:
-    """Lignes détectées par RapidOCR : (texte, confiance 0-1, boîte englobante)."""
-    resultat, _ = _get_rapidocr()(image)
-    return [(t, float(c), box) for box, t, c in (resultat or [])]
+# Une seule inférence RapidOCR à la fois par processus (cf. docstring).
+_infer_lock = threading.Lock()
 
 
 @dataclass
 class OcrWord:
     text: str
-    confidence: float
+    confidence: float          # 0-100 (comme Tesseract), ici score RapidOCR x100
     left: int
     top: int
     width: int
     height: int
 
 
-def _configure(settings: Settings) -> None:
-    import pytesseract
-    pytesseract.pytesseract.tesseract_cmd = settings.tesseract_cmd
-    # Pack de langue FR/EN embarqué dans le projet (weights/tessdata), indépendant de ce que
-    # l'installation système de Tesseract fournit par défaut (souvent l'anglais seul).
-    os.environ["TESSDATA_PREFIX"] = str(_TESSDATA_DIR)
+def _opt_out_ecoqos() -> None:
+    """Retire le processus du throttling EcoQoS (Windows) pour l'inférence ONNX."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class _PPS(ctypes.Structure):
+            _fields_ = [("Version", wintypes.ULONG),
+                        ("ControlMask", wintypes.ULONG),
+                        ("StateMask", wintypes.ULONG)]
+
+        # Version=1, ControlMask=EXECUTION_SPEED(0x1), StateMask=0 => opt-out.
+        info = _PPS(1, 0x1, 0)
+        kernel32 = ctypes.windll.kernel32
+        # ProcessPowerThrottling = 4
+        kernel32.SetProcessInformation(kernel32.GetCurrentProcess(), 4,
+                                       ctypes.byref(info), ctypes.sizeof(info))
+    except Exception as exc:  # best-effort, jamais bloquant
+        logger.debug("EcoQoS opt-out ignoré : %s", exc)
+
+
+def _get_ocr():
+    """Charge RapidOCR au premier appel (thread-safe). None si indisponible."""
+    global _ocr, _ocr_failed
+    if _ocr is not None or _ocr_failed:
+        return _ocr
+    with _ocr_lock:
+        if _ocr is not None or _ocr_failed:
+            return _ocr
+        _opt_out_ecoqos()
+        try:
+            from rapidocr_onnxruntime import RapidOCR
+            model = _MODEL_DIR / "latin_PP-OCRv3_rec_infer.onnx"
+            keys = _MODEL_DIR / "latin_dict.txt"
+            if model.exists() and keys.exists():
+                logger.info("[OCR] RapidOCR + modèle latin (%s)", model.name)
+                _ocr = RapidOCR(rec_model_path=str(model), rec_keys_path=str(keys),
+                                det_limit_side_len=1536)
+            else:
+                logger.info("[OCR] RapidOCR modèle par défaut (latin absent de %s)", _MODEL_DIR)
+                _ocr = RapidOCR()
+        except Exception as exc:
+            logger.error("[OCR] RapidOCR indisponible : %s", exc)
+            _ocr_failed = True
+    return _ocr
+
+
+def warmup() -> None:
+    """Pré-charge le moteur + une inférence factice (à appeler au démarrage)."""
+    ocr = _get_ocr()
+    if ocr is None:
+        return
+    try:
+        dummy = np.full((64, 256, 3), 255, dtype=np.uint8)
+        with _infer_lock:
+            ocr(dummy)
+        logger.info("[OCR] warmup RapidOCR terminé")
+    except Exception as exc:
+        logger.debug("[OCR] warmup ignoré : %s", exc)
+
+
+def _to_bgr(image: np.ndarray) -> np.ndarray:
+    """RapidOCR attend une image 3 canaux uint8 : convertit gris/float si besoin."""
+    arr = image
+    if arr.dtype != np.uint8:
+        arr = np.clip(arr, 0, 255).astype(np.uint8)
+    if arr.ndim == 2:
+        import cv2
+        arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+    elif arr.ndim == 3 and arr.shape[2] == 4:
+        import cv2
+        arr = cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+    return arr
+
+
+def _run(image: np.ndarray) -> list:
+    """Inférence RapidOCR sérialisée. Retourne une liste de [box, texte, score]."""
+    ocr = _get_ocr()
+    if ocr is None:
+        return []
+    with _infer_lock:
+        result, _ = ocr(_to_bgr(image))
+    return result or []
+
+
+def _box_bounds(box):
+    """Boîte RapidOCR (4 points) → (left, top, width, height) entiers."""
+    xs = [p[0] for p in box]
+    ys = [p[1] for p in box]
+    left, top = int(min(xs)), int(min(ys))
+    return left, top, int(max(xs)) - left, int(max(ys)) - top
 
 
 def extract_words(image: np.ndarray, settings: Settings | None = None) -> list[OcrWord]:
-    """Mots détectés avec position et confiance individuelle (0-100)."""
-    settings = settings or get_settings()
-
-    if getattr(settings, "ocr_engine", "rapidocr") == "rapidocr":
-        mots: list[OcrWord] = []
-        for texte, conf, boite in _rapidocr_lines(image):
-            propre = (texte or "").strip()
-            if not propre:
-                continue
-            xs = [int(p[0]) for p in boite]
-            ys = [int(p[1]) for p in boite]
-            # RapidOCR rend une LIGNE, pas un mot. La boîte est celle de la
-            # ligne entière : la position par mot serait fausse si on la
-            # découpait, on conserve donc la ligne telle quelle.
-            mots.append(OcrWord(text=propre, confidence=conf * 100.0,
-                                left=min(xs), top=min(ys),
-                                width=max(xs) - min(xs), height=max(ys) - min(ys)))
-        return mots
-
-    import pytesseract
-    _configure(settings)
-    pil_image = Image.fromarray(image)
-    data = pytesseract.image_to_data(
-        pil_image, lang=settings.ocr_languages, output_type=pytesseract.Output.DICT
-    )
-
+    """Fait tourner RapidOCR ; retourne chaque texte détecté avec sa position et
+    sa confiance individuelle (0-100), pour le calcul de la confiance moyenne."""
     words: list[OcrWord] = []
-    for i, text in enumerate(data["text"]):
-        cleaned = text.strip()
-        if not cleaned:
+    for row in _run(image):
+        try:
+            box, text, score = row[0], str(row[1]).strip(), float(row[2])
+        except (IndexError, TypeError, ValueError):
             continue
-        confidence = float(data["conf"][i])
-        if confidence < 0:  # -1 = pas de texte exploitable sur cette zone
+        if not text:
             continue
-        words.append(
-            OcrWord(
-                text=cleaned,
-                confidence=confidence,
-                left=data["left"][i],
-                top=data["top"][i],
-                width=data["width"][i],
-                height=data["height"][i],
-            )
-        )
+        left, top, width, height = _box_bounds(box)
+        words.append(OcrWord(text=text, confidence=round(score * 100, 2),
+                             left=left, top=top, width=width, height=height))
     return words
 
 
 def extract_text(image: np.ndarray, settings: Settings | None = None) -> str:
-    """Texte brut complet, lignes préservées, utilisé par cni_parser.py pour le
-    repérage des libellés de champs."""
-    settings = settings or get_settings()
+    """Texte à lignes préservées (utilisé par cni_parser.py pour le repérage des
+    libellés). RapidOCR renvoie des boîtes non ordonnées : on les regroupe en
+    lignes par proximité verticale, puis on ordonne chaque ligne de gauche à
+    droite — équivalent au rendu ligne par ligne d'image_to_string de Tesseract.
+    """
+    items = []
+    for row in _run(image):
+        try:
+            box, text = row[0], str(row[1]).strip()
+        except (IndexError, TypeError):
+            continue
+        if not text:
+            continue
+        left, top, _, height = _box_bounds(box)
+        items.append((top, height, left, text))
+    if not items:
+        return ""
 
-    if getattr(settings, "ocr_engine", "rapidocr") == "rapidocr":
-        lignes = _rapidocr_lines(image)
-        # Remise en ordre de lecture : RapidOCR rend les lignes dans l'ordre de
-        # détection, pas de haut en bas. L'analyseur, lui, lit un libellé puis
-        # la valeur qui suit — un mauvais ordre lui ferait associer la valeur
-        # d'un champ au libellé d'un autre.
-        lignes.sort(key=lambda item: (min(int(p[1]) for p in item[2]),
-                                      min(int(p[0]) for p in item[2])))
-        return "\n".join(t for t, _, _ in lignes)
+    items.sort(key=lambda t: (t[0], t[2]))          # haut→bas puis gauche→droite
+    lines: list[list] = []
+    for top, height, left, text in items:
+        placed = False
+        for line in lines:
+            ref_top, ref_h = line[0][0], line[0][1]
+            # même ligne si les centres verticaux sont proches (< 60 % de la hauteur)
+            if abs((top + height / 2) - (ref_top + ref_h / 2)) <= max(height, ref_h) * 0.6:
+                line.append((top, height, left, text))
+                placed = True
+                break
+        if not placed:
+            lines.append([(top, height, left, text)])
 
-    import pytesseract
-    _configure(settings)
-    pil_image = Image.fromarray(image)
-    return pytesseract.image_to_string(pil_image, lang=settings.ocr_languages)
+    out_lines = []
+    for line in lines:
+        line.sort(key=lambda t: t[2])               # gauche → droite
+        out_lines.append(" ".join(t[3] for t in line))
+    return "\n".join(out_lines)

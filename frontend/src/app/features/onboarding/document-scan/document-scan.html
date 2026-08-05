@@ -1,14 +1,18 @@
 <main class="journey">
     <aside class="journey-aside">
         <a class="brand" href="/onboarding/welcome"><img src="afriland-first-bank-logo.png" alt="">Afriland First Bank</a>
-        <h1>Scan de votre pièce d’identité</h1>
-        <p>Présentez votre CNI face à la caméra. La capture se déclenche automatiquement dès que l’image est nette et bien cadrée.</p>
+        <h1>{{ lang.t('Scan de votre pièce d’identité', 'Scan your ID document') }}</h1>
+        <p>{{ lang.t('Présentez votre pièce face à la caméra. La capture se déclenche automatiquement dès que l’image
+            est nette et bien cadrée.', 'Hold your document up to the camera. Capture starts automatically once the
+            image is sharp and correctly framed.') }}</p>
     </aside>
     <section class="journey-main">
         <div class="form-shell">
-            <button type="button" class="back-link" (click)="goBack()">← Retour</button>
-            <h2>{{ step() === 'BACK' ? 'Présentez le verso' : 'Présentez le recto' }}</h2>
-            <p class="lead">Document bien à plat, sans reflet, entièrement visible dans le cadre.</p>
+            <button type="button" class="back-link" (click)="goBack()">← {{ lang.t('Retour', 'Back') }}</button>
+            <h2>{{ step() === 'BACK' ? lang.t('Présentez le verso', 'Show the back') : lang.t('Présentez le recto',
+                'Show the front') }}</h2>
+            <p class="lead">{{ lang.t('Document bien à plat, sans reflet, entièrement visible dans le cadre.',
+                'Document flat, glare-free and fully visible inside the frame.') }}</p>
 
             @if (step() !== 'UPLOADING') {
                 <div class="scan-viewport">
@@ -29,7 +33,8 @@
             }
 
             <button class="secondary-button" type="button" (click)="useManualUpload()">
-                <span class="text-black">Vous ne pouvez pas utiliser la caméra ?</span> Téléversez une photo
+                <span class="text-black">{{ lang.t('Vous ne pouvez pas utiliser la caméra ?', 'Can’t use the camera?')
+                    }}</span> {{ lang.t('Téléversez une photo', 'Upload a photo') }}
             </button>
         </div>
     </section>

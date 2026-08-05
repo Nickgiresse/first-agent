@@ -15,6 +15,16 @@ public class OnboardingController {
 
     private final OnboardingService onboardingService;
 
+    // Entrée par lien : le microservice reçoit le JWT dans l'URL (?t=). Endpoint public (aucune
+    // session n'existe encore) : il valide le lien auprès du WhatsApp banking et renvoie le contexte.
+    @PostMapping("/link/verify")
+    public ResponseEntity<ApiResponse<LinkVerificationResponse>> verifyLink(
+        @Valid @RequestBody LinkVerifyRequest request
+    ) {
+        LinkVerificationResponse response = onboardingService.verifyOnboardingLink(request.getToken());
+        return ResponseEntity.ok(ApiResponse.success(response, "Lien vérifié"));
+    }
+
     @PostMapping("/kyc/otp/request")
     public ResponseEntity<ApiResponse<Void>> requestEmailOtp(
         @RequestHeader("X-Session-Token") String sessionToken,
@@ -66,9 +76,10 @@ public class OnboardingController {
 
     @PostMapping("/complete")
     public ResponseEntity<ApiResponse<OnboardingCompletionResponse>> completeOnboarding(
-        @RequestHeader("X-Session-Token") String sessionToken
+        @RequestHeader("X-Session-Token") String sessionToken,
+        @RequestBody(required = false) CompleteOnboardingRequest request
     ) {
-        OnboardingCompletionResponse response = onboardingService.completeOnboarding(sessionToken);
+        OnboardingCompletionResponse response = onboardingService.completeOnboarding(sessionToken, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Onboarding terminé avec succès"));
     }
 }

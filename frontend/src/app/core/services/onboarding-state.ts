@@ -8,7 +8,9 @@ const INITIAL_STATE: OnboardingSessionState = {
   firstName: null,
   lastName: null,
   email: null,
-  expiresAt: null
+  expiresAt: null,
+  linkToken: null,
+  pin: null
 };
 
 function readFromStorage(): OnboardingSessionState {
@@ -28,19 +30,36 @@ export class OnboardingState {
   readonly firstName = () => this.state().firstName;
   readonly lastName = () => this.state().lastName;
   readonly email = () => this.state().email;
+  readonly linkToken = () => this.state().linkToken;
+  readonly pin = () => this.state().pin;
 
   setAccountVerified(sessionToken: string, firstName: string, lastName: string, expiresInSeconds: number): void {
+    const current = this.state();
     this.persist({
       sessionToken,
       firstName,
       lastName,
       email: null,
-      expiresAt: Date.now() + expiresInSeconds * 1000
+      expiresAt: Date.now() + expiresInSeconds * 1000,
+      // On préserve le token du lien et le PIN déjà captés (l'entrée par lien précède la
+      // vérification du compte) : ils sont nécessaires à la finalisation.
+      linkToken: current.linkToken,
+      pin: current.pin
     });
   }
 
   setEmail(email: string | null): void {
     this.persist({ ...this.state(), email });
+  }
+
+  // Token du lien d'onboarding (?t=), capté à l'entrée du parcours.
+  setLinkToken(linkToken: string): void {
+    this.persist({ ...this.state(), linkToken });
+  }
+
+  // PIN en clair, conservé pour la finalisation (transmis en HTTPS, haché côté banque).
+  setPin(pin: string | null): void {
+    this.persist({ ...this.state(), pin });
   }
 
   isSessionValid(): boolean {

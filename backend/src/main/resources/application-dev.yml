@@ -52,6 +52,12 @@ app:
   vision-service:
     base-url: ${VISION_SERVICE_URL:http://localhost:8001}
     api-key: ${VISION_SERVICE_API_KEY:changeme-local-dev-key}
+  # WhatsApp banking (dépôt firstagent-demo) : source de vérité du client final. Ce microservice
+  # y lit l'éligibilité et y écrit le client onboardé via l'API M2M à clé (jamais la base en direct).
+  # api-key doit valoir la même chose que ONBOARDING_API_KEY côté firstagent-demo.
+  whatsapp-banking:
+    base-url: ${WHATSAPP_BANKING_URL:http://localhost:8000}
+    api-key: ${WHATSAPP_BANKING_API_KEY:}
   ocr:
     min-confidence-score: 60
     name-similarity-threshold: 0.75

@@ -20,34 +20,54 @@ from app.ocr.text_utils import all_dates, clean_name, earliest, latest, normaliz
 #    prend juste la première suite de chiffres du texte. On préfère donc une ligne qui ne contient
 #    QUE des chiffres (9 à 12) avant de se rabattre sur la recherche dans tout le texte.
 _FIELD_LABEL_PATTERNS: dict[str, list[str]] = {
-    "lastName": [r"NOM\s*/\s*SURNAME\b", r"NOM\s*/\s*NAME\b", r"\bSURNAME\b", r"^\s*NOM\s*:?\s*$"],
-    "firstName": [r"PR[EÉ]NOM.?S?\s*/\s*GIVEN\s*NAMES?", r"\bGIVEN\s*NAMES?\b", r"PR[EÉ]NOM.?S?"],
-    "documentNumber": [r"N[°oO]\s*C\.?\s*N\.?\s*I\.?", r"IDENTIFICATION\s*NUMBER", r"N[°oO]\s*CARTE"],
+    "lastName": [
+        r"NOM\s*[\/\:\-]?\s*SURNAME\b",
+        r"NOM\s*[\/\:\-]?\s*NAME\b",
+        r"\bSURNAME\b",
+        r"^\s*NOM\b",
+        r"FAMILY\s*NAME\b",
+    ],
+    "firstName": [
+        r"PR[EÉ]NOMS?\s*[\/\:\-]?\s*GIVEN\s*NAMES?",
+        r"PR[EÉ]NOMS?\s*[\/\:\-]?\s*FIRST\s*NAMES?",
+        r"\bGIVEN\s*NAMES?\b",
+        r"\bFIRST\s*NAMES?\b",
+        r"PR[EÉ]NOMS?\b",
+    ],
+    "documentNumber": [
+        r"N[°oO0]\s*C\.?\s*N\.?\s*I\.?",
+        r"IDENTIFICATION\s*NUMBER",
+        r"N[°oO0]\s*CARTE",
+        r"DOCUMENT\s*N[°oO0]?",
+        r"CARD\s*N[°oO0]?",
+    ],
     "birthDate": [
-        r"DATE\s*DE\s*NAISSANCE\s*/\s*DATE\s*OF\s*BIRTH",
+        r"DATE\s*DE\s*NAISSANCE\s*[\/\:]?\s*DATE\s*OF\s*BIRTH",
         r"DATE\s*DE\s*NAISSANCE",
         r"DATE\s*OF\s*BIRTH",
         r"N[EÉ]E?\(?E?\)?\s*LE\b",
+        r"BORN\s*ON\b",
     ],
     "expiryDate": [
-        r"DATE\s*D.?\s*EXPIRATION\s*/\s*DATE\s*OF\s*EXPIRY",
+        r"DATE\s*D.?\s*EXPIRATION\s*[\/\:]?\s*DATE\s*OF\s*EXPIRY",
         r"DATE\s*D.?\s*EXPIRATION",
         r"DATE\s*OF\s*EXPIRY",
         r"EXPIRE\s*LE\b",
+        r"EXPIRATION\b",
+        r"VALID\s*TO\b",
     ],
     "birthPlace": [
-        r"LIEU\s*DE\s*NAISSANCE\s*/\s*PLACE\s*OF\s*BIRTH",
+        r"LIEU\s*DE\s*NAISSANCE\s*[\/\:]?\s*PLACE\s*OF\s*BIRTH",
         r"LIEU\s*DE\s*NAISSANCE",
         r"PLACE\s*OF\s*BIRTH",
+        r"\b[AÀ]\s*:\s*[A-Z]+",
     ],
 }
 
-# Recherché séparément (voir point 2 ci-dessus) plutôt que via _FIELD_LABEL_PATTERNS/value_after_label.
-_SEX_LABEL_PATTERN = re.compile(r"SEXE\s*/\s*SEX\b|\bSEXE\b|\bSEX\b")
-
+_SEX_LABEL_PATTERN = re.compile(r"SEXE\s*[\/\:\-]?\s*SEX\b|\bSEXE\b|\bSEX\b", re.IGNORECASE)
 _DOCUMENT_NUMBER_PATTERN = re.compile(r"\b\d{9,12}\b")
 _STANDALONE_DOCUMENT_NUMBER_PATTERN = re.compile(r"^\d{9,12}$")
-_SEX_PATTERN = re.compile(r"\b([MF])\b")
+_SEX_PATTERN = re.compile(r"\b([MF])\b", re.IGNORECASE)
 
 
 @dataclass

@@ -15,5 +15,9 @@ public interface OnboardingService {
 
     void acceptTerms(String sessionToken, TermsAcceptanceRequest request);
 
-    OnboardingCompletionResponse completeOnboarding(String sessionToken);
+    // Entrée par lien : valide le JWT du lien d'onboarding (?t=) auprès du WhatsApp banking et
+    // renvoie le contexte (téléphone, langue, identité connue) pour démarrer le parcours.
+    LinkVerificationResponse verifyOnboardingLink(String token);
+
+    OnboardingCompletionResponse completeOnboarding(String sessionToken, CompleteOnboardingRequest request);
 }

@@ -4,6 +4,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { OnboardingState } from '../../../core/services/onboarding-state';
+import { LanguageService } from '../../../core/services/language';
 
 type Phase = 'EMAIL' | 'OTP';
 
@@ -11,6 +12,8 @@ const RESEND_COOLDOWN_SECONDS = 45;
 
 @Component({ selector: 'app-kyc', imports: [ReactiveFormsModule], templateUrl: './kyc.html', styleUrl: './kyc.scss' })
 export class Kyc {
+  readonly lang = inject(LanguageService);
+
   private readonly state = inject(OnboardingState);
   private readonly service = inject(OnboardingService);
   private readonly router = inject(Router);

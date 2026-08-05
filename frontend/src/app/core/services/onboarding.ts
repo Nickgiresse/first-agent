@@ -50,11 +50,35 @@ export class OnboardingService {
     });
   }
 
+  // Entrée par lien : valide le JWT reçu dans l'URL (?t=) auprès du backend (qui interroge le
+  // WhatsApp banking) et renvoie le contexte pour démarrer/pré-remplir le parcours.
+  verifyLink(token: string): Observable<ApiResponse<LinkVerificationResponse>> {
+    return this.http.post<ApiResponse<LinkVerificationResponse>>(
+      `${this.baseUrl}/link/verify`,
+      { token }
+    );
+  }
+
   completeOnboarding(): Observable<ApiResponse<OnboardingCompletionResponse>> {
+    // On transmet le token du lien (consommé côté source de vérité) et le PIN en clair, portés
+    // depuis les étapes précédentes. Absents (parcours sans lien) => le backend reste local.
+    const body = {
+      linkToken: this.onboardingState.linkToken(),
+      pin: this.onboardingState.pin()
+    };
     return this.http.post<ApiResponse<OnboardingCompletionResponse>>(
       `${this.baseUrl}/complete`,
-      {},
+      body,
       { headers: this.authHeaders() }
     );
   }
+}
+
+export interface LinkVerificationResponse {
+  valid: boolean;
+  phone: string;
+  name: string;
+  accountNumber: string;
+  lang: string;
+  alreadyOnboarded: boolean;
 }

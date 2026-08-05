@@ -3,7 +3,7 @@
 }
 
 .terms {
-    max-height: 180px;
+    max-height: 280px;
     overflow: auto;
     padding: 18px;
     border: 1px solid var(--color-border);
@@ -12,28 +12,38 @@
     line-height: 1.55
 }
 
-/* Indication de lecture : passe au vert une fois le texte parcouru. */
-.terms-hint {
-    margin: 10px 0 0;
-    padding: 8px 12px;
-    border: 1px solid #f5e0a8;
-    border-radius: 8px;
-    background: #fff8e6;
-    color: #8a6100;
-    font-size: 13px;
-    line-height: 1.45
+.terms h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: var(--color-text)
 }
 
-.terms-hint--done {
-    border-color: #c8e6c9;
-    background: #f0f8f0;
-    color: #2e7d32
+.terms h4 {
+    margin: 18px 0 6px;
+    font-size: .9rem;
+    color: var(--color-text)
+}
+
+.terms p {
+    margin: 0 0 10px
+}
+
+.terms-end {
+    margin-top: 18px;
+    text-align: center;
+    font-style: italic
+}
+
+.scroll-hint {
+    margin: 10px 0 0;
+    font-size: .85rem;
+    color: var(--color-primary)
 }
 
 .consent {
     display: flex;
     gap: 12px;
-    margin: 22px 0;
+    margin: 18px 0;
     line-height: 1.45
 }
 
@@ -42,13 +52,20 @@
     margin-top: 3px
 }
 
-/* La case grisée doit se voir : sans repère visuel, le client la clique,
-   rien ne se passe, et il croit à un défaut de l'application. */
-.consent:has(input:disabled) {
-    opacity: .6;
-    cursor: not-allowed
+/* Case désactivée tant que les conditions n'ont pas été déroulées jusqu'au bout. */
+.consent input:disabled+span {
+    opacity: .55
 }
 
-.consent input:disabled {
-    cursor: not-allowed
+.form-error {
+    margin: 0 0 14px;
+    color: var(--color-primary-dark);
+    font-size: .9rem
+}
+
+.legal-note {
+    margin: 18px 0 0;
+    font-size: .78rem;
+    line-height: 1.5;
+    color: var(--color-muted)
 }
