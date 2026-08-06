@@ -1,0 +1,37 @@
+# Configuration commune aux tests à contexte Spring.
+#
+# Elle fournit les valeurs que le code exige au démarrage et que la
+# configuration de production laisse volontairement vides, faute de quoi
+# aucun test chargeant le contexte ne peut s'exécuter.
+#
+# Ces valeurs sont FICTIVES et n'ouvrent aucun accès : elles ne servent qu'à
+# satisfaire les contrôles de démarrage. Aucun secret réel ne doit figurer
+# ici, la charte backend §7 proscrivant tout secret versionné, y compris de
+# test.
+
+spring:
+  # Même profil qu'auparavant : ce fichier masque application.yml du module
+  # boot, qui activait `dev`. Sans cette ligne, application-dev.yml n'est plus
+  # chargé et la source de données disparaît, ce qui fait échouer tout test à
+  # contexte Spring.
+  profiles:
+    active: dev
+  mail:
+    host: localhost
+    port: 3025
+
+app:
+  jwt:
+    secret: secret-de-test-suffisamment-long-pour-hmac-sha256
+  mail:
+    from-address: tests@exemple.invalid
+
+  # Clients machine-à-machine. Les deux refusent de démarrer sur une clé vide,
+  # ce qui est le comportement voulu en production : un service incapable
+  # d'appeler ses dépendances ne doit pas se croire opérationnel.
+  whatsapp-banking:
+    base-url: http://localhost:8000
+    api-key: cle-de-test-whatsapp-banking
+  vision-service:
+    base-url: http://localhost:8001
+    api-key: cle-de-test-vision

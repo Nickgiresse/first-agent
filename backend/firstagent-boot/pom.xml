@@ -72,6 +72,31 @@
 
 	<build>
 		<plugins>
+			<!--
+			  Variables exigées au démarrage, fournies pour les tests.
+
+			  Elles ne peuvent pas venir d'un fichier de configuration de test :
+			  le profil `dev` est chargé APRÈS et repose ces mêmes clés avec un
+			  défaut vide, ce qui ferait à nouveau échouer les contrôles.
+			  Passées ici, elles alimentent la résolution de ${VAR:...} et
+			  valent pour tous les tests à contexte Spring.
+
+			  Valeurs FICTIVES : elles n'ouvrent aucun accès et ne servent qu'à
+			  satisfaire les contrôles de démarrage. La charte §7 proscrit tout
+			  secret versionné, y compris de test.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<WHATSAPP_BANKING_API_KEY>cle-de-test-whatsapp-banking</WHATSAPP_BANKING_API_KEY>
+						<VISION_SERVICE_API_KEY>cle-de-test-vision</VISION_SERVICE_API_KEY>
+						<JWT_SECRET>secret-de-test-suffisamment-long-pour-hmac-sha256</JWT_SECRET>
+						<MAIL_PASSWORD>mot-de-passe-de-test</MAIL_PASSWORD>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
