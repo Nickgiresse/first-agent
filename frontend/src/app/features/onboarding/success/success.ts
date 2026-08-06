@@ -12,7 +12,7 @@ interface ConfettiPiece {
   drift: number;
 }
 
-const CONFETTI_COLORS = ['#e30613', '#ffb400', '#2ecc71', '#3498db', '#9b59b6', '#ff6f91'];
+const CONFETTI_COLORS = ['#c8102e', '#d4af37', '#9e0d25', '#f7a800', '#ffffff', '#e6c875'];
 const CONFETTI_COUNT = 60;
 
 @Component({

@@ -7,7 +7,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: radial-gradient(circle at top, #fff0f2, transparent 38%), #fff
+    background: radial-gradient(circle at top, var(--color-gold-soft) 0%, var(--color-primary-soft) 40%, #fff 75%), #fff
 }
 
 .success section {
@@ -58,26 +58,29 @@
 .success img {
     width: 120px;
     height: 90px;
-    object-fit: contain
+    object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1));
 }
 
 .check {
     display: grid;
     place-items: center;
-    width: 76px;
-    height: 76px;
+    width: 84px;
+    height: 84px;
     margin: 26px auto;
     border-radius: 50%;
-    background: #fff0f2;
+    background: linear-gradient(135deg, var(--color-gold-soft) 0%, #fff 100%);
+    border: 3px solid var(--color-gold);
     color: var(--color-primary);
-    font-size: 40px;
-    font-weight: 800
+    font-size: 44px;
+    font-weight: 800;
+    box-shadow: var(--shadow-gold);
 }
 
 .success h1 {
     font: 800 40px/1.1 var(--font-display);
     letter-spacing: -.05em;
-    color: var(--color-primary-dark)
+    color: var(--color-ink);
 }
 
 .success p {

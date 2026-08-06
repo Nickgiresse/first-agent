@@ -64,6 +64,10 @@ export class LivenessChallenge {
     this.location.back();
   }
 
+  goToOcrReview(): void {
+    this.router.navigateByUrl('/onboarding/document-ocr-review');
+  }
+
   private async init(): Promise<void> {
     const stream = await this.camera.start('user');
     const video = this.videoRef()?.nativeElement;

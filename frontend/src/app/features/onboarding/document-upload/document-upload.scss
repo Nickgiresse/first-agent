@@ -9,10 +9,16 @@
     min-height: 104px;
     margin: 14px 0;
     padding: 24px;
-    border: 1px dashed var(--color-primary);
+    border: 2px dashed var(--color-gold-border);
     border-radius: 10px;
-    background: #fff7f8;
+    background: var(--color-gold-soft);
     cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        border-color: var(--color-gold);
+        background: #fbf3d8;
+    }
 
     &.has-preview {
         display: flex;
@@ -26,7 +32,7 @@
     height: 48px;
     object-fit: cover;
     border-radius: 6px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border);
 }
 
 .upload-zone input {
@@ -43,15 +49,17 @@
 
 .upload-zone.done {
     border-style: solid;
-    background: #f4fff8;
+    border-color: #10b981;
+    background: #ecfdf5;
 }
 
 .status-box {
     margin: 12px 0;
     padding: 12px 16px;
-    background-color: #f0f9ff;
-    border: 1px solid #bae6fd;
+    background-color: var(--color-gold-soft);
+    border: 1px solid var(--color-gold-border);
     border-radius: 8px;
-    color: #0369a1;
+    color: var(--color-primary-dark);
     font-size: 14px;
+    font-weight: 500;
 }

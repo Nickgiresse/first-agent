@@ -153,9 +153,43 @@ def _box_bounds(box):
     return left, top, int(max(xs)) - left, int(max(ys)) - top
 
 
+def _tesseract_fallback_words(image: np.ndarray, settings: Settings | None = None) -> list[OcrWord]:
+    import pytesseract
+    from PIL import Image
+    cfg = settings or Settings()
+    pytesseract.pytesseract.tesseract_cmd = cfg.tesseract_cmd
+    pil_img = Image.fromarray(image) if isinstance(image, np.ndarray) else image
+    data = pytesseract.image_to_data(pil_img, lang=cfg.ocr_languages, output_type=pytesseract.Output.DICT)
+    words = []
+    for i in range(len(data["text"])):
+        text = str(data["text"][i]).strip()
+        conf = float(data["conf"][i])
+        if text and conf > 0:
+            words.append(OcrWord(
+                text=text,
+                confidence=conf,
+                left=int(data["left"][i]),
+                top=int(data["top"][i]),
+                width=int(data["width"][i]),
+                height=int(data["height"][i])
+            ))
+    return words
+
+
+def _tesseract_fallback_text(image: np.ndarray, settings: Settings | None = None) -> str:
+    import pytesseract
+    from PIL import Image
+    cfg = settings or Settings()
+    pytesseract.pytesseract.tesseract_cmd = cfg.tesseract_cmd
+    pil_img = Image.fromarray(image) if isinstance(image, np.ndarray) else image
+    return pytesseract.image_to_string(pil_img, lang=cfg.ocr_languages, config="--psm 6")
+
+
 def extract_words(image: np.ndarray, settings: Settings | None = None) -> list[OcrWord]:
-    """Fait tourner RapidOCR ; retourne chaque texte détecté avec sa position et
-    sa confiance individuelle (0-100), pour le calcul de la confiance moyenne."""
+    """Fait tourner RapidOCR (ou Tesseract en fallback) ; retourne chaque texte détecté
+    avec sa position et sa confiance individuelle (0-100)."""
+    if _get_ocr() is None:
+        return _tesseract_fallback_words(image, settings)
     words: list[OcrWord] = []
     for row in _run(image):
         try:
@@ -172,10 +206,10 @@ def extract_words(image: np.ndarray, settings: Settings | None = None) -> list[O
 
 def extract_text(image: np.ndarray, settings: Settings | None = None) -> str:
     """Texte à lignes préservées (utilisé par cni_parser.py pour le repérage des
-    libellés). RapidOCR renvoie des boîtes non ordonnées : on les regroupe en
-    lignes par proximité verticale, puis on ordonne chaque ligne de gauche à
-    droite — équivalent au rendu ligne par ligne d'image_to_string de Tesseract.
+    libellés). RapidOCR (ou Tesseract en fallback).
     """
+    if _get_ocr() is None:
+        return _tesseract_fallback_text(image, settings)
     items = []
     for row in _run(image):
         try:

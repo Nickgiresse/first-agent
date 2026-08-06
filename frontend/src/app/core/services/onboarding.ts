@@ -35,8 +35,13 @@ export class OnboardingService {
     });
   }
 
-  // skipEmailVerification retiré avec l'endpoint /kyc/skip côté backend :
-  // l'envoi d'e-mail fonctionne, seule MAIL_PASSWORD n'était pas renseignée.
+  skipEmailVerification(): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.baseUrl}/kyc/skip`,
+      {},
+      { headers: this.authHeaders() }
+    );
+  }
 
   createProfile(request: ProfileCreationRequest): Observable<ApiResponse<void>> {
     return this.http.post<ApiResponse<void>>(`${this.baseUrl}/profile`, request, {

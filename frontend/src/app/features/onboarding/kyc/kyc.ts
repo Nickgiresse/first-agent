@@ -75,8 +75,21 @@ export class Kyc {
     this.requestCode();
   }
 
-  // skipEmail retiré : l'envoi d'e-mail fonctionne, seule la variable
-  // MAIL_PASSWORD n'était pas renseignée côté backend.
+  skipEmail(): void {
+    if (this.submitting()) return;
+    this.submitting.set(true);
+    this.error.set(null);
+    this.service.skipEmailVerification().subscribe({
+      next: () => {
+        this.state.setEmail(null);
+        this.router.navigateByUrl('/onboarding/pin-creation');
+      },
+      error: err => {
+        this.error.set(err?.message ?? err?.error?.message ?? 'Impossible d’ignorer cette étape.');
+        this.submitting.set(false);
+      }
+    });
+  }
 
   changeEmail(): void {
     this.phase.set('EMAIL');

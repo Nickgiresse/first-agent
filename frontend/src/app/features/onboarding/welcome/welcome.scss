@@ -6,24 +6,53 @@
 
 .welcome-info {
     padding: 50px;
-    background: #f4f5f7;
+    background: linear-gradient(145deg, #c8102e 0%, #9e0d25 60%, #6e0819 100%);
+    color: #fff;
     display: flex;
-    flex-direction: column
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: -100px;
+        right: -100px;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(212, 175, 55, 0.25) 0%, transparent 70%);
+        pointer-events: none;
+    }
+}
+
+.welcome-info-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+}
+
+.welcome-info .brand {
+    color: #fff;
 }
 
 .welcome-copy {
-    margin: auto 0
+    margin: auto 0;
+    position: relative;
+    z-index: 2;
 }
 
 .welcome-copy h1 {
     font: 800 clamp(36px, 4vw, 56px)/1.08 var(--font-display);
     letter-spacing: -.05em;
     max-width: 500px;
-    margin: 0 0 20px
+    margin: 0 0 20px;
+    color: #fff;
 }
 
 .welcome-copy p {
-    color: var(--color-muted);
+    color: rgba(255, 255, 255, .88);
     font-size: 19px;
     max-width: 440px;
     line-height: 1.55
@@ -41,7 +70,8 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    font-weight: 700
+    font-weight: 700;
+    color: rgba(255, 255, 255, .9);
 }
 
 .welcome-copy b {
@@ -50,20 +80,51 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--color-primary-soft);
-    color: var(--color-primary-dark)
+    background: var(--color-gold);
+    border: 1px solid var(--color-gold);
+    color: var(--color-ink);
+    flex-shrink: 0;
 }
 
 .welcome-info footer {
     font-size: 13px;
-    color: var(--color-muted)
+    color: rgba(255, 255, 255, .7);
+    position: relative;
+    z-index: 2;
+}
+
+.lang-switch {
+    padding: 7px 18px;
+    border-radius: 99px;
+    border: 1.5px solid rgba(255, 255, 255, .5);
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .03em;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background .18s, border-color .18s, transform .15s;
+    position: relative;
+    z-index: 2;
+    white-space: nowrap;
+
+    &:hover {
+        background: rgba(255, 255, 255, .22);
+        border-color: rgba(255, 255, 255, .8);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
 }
 
 .welcome-action {
     display: grid;
     place-items: center;
     padding: 40px;
-    background: radial-gradient(circle at top right, #fff0f2 0, transparent 38%), #fff
+    background: radial-gradient(circle at top right, var(--color-gold-soft) 0%, var(--color-primary-soft) 40%, #fff 70%), #fff
 }
 
 .welcome-panel {
@@ -75,14 +136,15 @@
     width: 146px;
     height: 112px;
     object-fit: contain;
-    margin-bottom: 28px
+    margin-bottom: 28px;
+    filter: drop-shadow(0 4px 12px rgba(200, 16, 46, 0.12));
 }
 
 .welcome-panel h2 {
     font: 800 42px/1 var(--font-display);
     letter-spacing: -.05em;
     margin: 0 0 15px;
-    color: var(--color-primary-dark)
+    color: var(--color-primary)
 }
 
 .welcome-panel p {

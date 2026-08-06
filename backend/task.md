@@ -1,0 +1,33 @@
+# Task Checklist - Backend Charter Compliance Migration
+
+- [ ] **Task 1: Setup parent pom, sub-module structures, and quality tools**
+  - [ ] Configure `backend/pom.xml` with packaging `pom`, active modules, and plugin configurations.
+  - [ ] Create `backend-domain/pom.xml` with enforcer constraints.
+  - [ ] Create `backend-commons/pom.xml` for shared utils.
+  - [ ] Create `backend-application/pom.xml` for application ports and usecases.
+  - [ ] Create `backend-infrastructure/pom.xml` for adapter and integration libraries.
+  - [ ] Create `backend-boot/pom.xml` for packaging the final application.
+- [ ] **Task 2: Implement Domain Layer (`backend-domain`)**
+  - [ ] Create pure domain entities: `BankAccount`, `Customer`, `OnboardingSession`, `CustomerDocument`, `DocumentOcrResult`, `FaceVerificationResult`, `LivenessResult`, `PinResetToken`.
+  - [ ] Create `UuidV7Generator` for generating v7 UUIDs.
+  - [ ] Ensure no framework annotations (no Spring, JPA, Lombok, etc.) are present in this module.
+- [x] **Task 3: Implement Commons Layer (`backend-commons`)**
+  - [x] Move shared enums (`DocumentType`, `CustomerStatus`, etc.) and exceptions base classes.
+  - [x] Move custom `ApiResponse` envelope.
+- [x] **Task 4: Implement Application Layer (`backend-application`)**
+  - [x] Define incoming ports (`VerifyAccountUseCase`, `CreateProfileUseCase`, etc.).
+  - [x] Define outgoing ports (`BankAccountRepositoryPort`, `CustomerRepositoryPort`, etc.).
+  - [x] Implement usecases with reactive WebFlux types (`Mono` and `Flux`).
+- [x] **Task 5: Implement Infrastructure Layer (`backend-infrastructure`)**
+  - [x] Implement R2DBC entities and reactive repositories.
+  - [x] Implement database repository adapters.
+  - [x] Implement WebFlux reactive REST controllers (handling multipart uploads and RFC 7807 error responses).
+  - [x] Implement external clients (DeiOcrClient, PythonVisionClient, WhatsAppBankingClient).
+  - [x] Configure Keycloak OAuth2 validation and OpenFGA ReBAC.
+  - [x] Set up Liquibase migration schema with dedicated JDBC datasource.
+- [x] **Task 6: Configure Boot Module (`backend-boot`)**
+  - [x] Implement `BackendApplication.java` entry point.
+  - [x] Setup application YAML files with Nacos configs.
+- [x] **Task 7: Verification and Testing**
+  - [x] Verify build and quality gates: `./mvnw.cmd clean verify -DskipTests -o`
+  - [x] Run the full test suite: `./mvnw.cmd test -o`

@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,7 +30,11 @@ class Settings(BaseSettings):
     # "tesseract" fonctionne tel quel si le binaire est sur le PATH (cas Docker/Linux après
     # apt-get install tesseract-ocr). Sous Windows, définir TESSERACT_CMD dans .env si non installé
     # via l'option "add to PATH" (ex: C:\Program Files\Tesseract-OCR\tesseract.exe).
-    tesseract_cmd: str = "tesseract"
+    tesseract_cmd: str = (
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.name == "nt" and os.path.exists(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+        else "tesseract"
+    )
     ocr_languages: str = "fra+eng"
     min_ocr_confidence: float = 40.0            # confiance moyenne (0-100) en dessous de laquelle on avertit
 

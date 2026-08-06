@@ -1,7 +1,11 @@
 <main class="welcome">
   <section class="welcome-info">
-    <a class="brand" routerLink="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
-        alt="Afriland First Bank">Afriland First Bank</a>
+    <div class="welcome-info-top">
+      <a class="brand" routerLink="/onboarding/welcome"><img src="afriland-first-bank-logo.png"
+          alt="Afriland First Bank"></a>
+      <button type="button" class="lang-switch" (click)="lang.toggle()">{{ lang.isEnglish() ? 'Français' : 'English'
+        }}</button>
+    </div>
     <div class="welcome-copy">
       <h1>{{ lang.t('Activez votre accès au service WhatsApp', 'Activate your WhatsApp banking access') }}</h1>
       <p>{{ lang.t('Un parcours simple et sécurisé pour vérifier votre identité bancaire.', 'A simple, secure journey
@@ -16,8 +20,6 @@
   </section>
   <section class="welcome-action">
     <div class="welcome-panel">
-      <button type="button" class="lang-switch" (click)="lang.toggle()">{{ lang.isEnglish() ? 'Français' : 'English'
-        }}</button>
       <img class="hero-logo" src="afriland-first-bank-logo.png" alt="">
       @if (knownName()) {
       <h2>{{ lang.t('Bonjour', 'Hello') }} {{ knownName() }}</h2>

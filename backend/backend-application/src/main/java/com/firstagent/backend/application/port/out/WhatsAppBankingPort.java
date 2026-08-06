@@ -1,0 +1,9 @@
+package com.firstagent.backend.application.port.out;
+
+import com.firstagent.backend.domain.model.BankAccount;
+import com.firstagent.backend.domain.model.valueobject.BankAccountNumber;
+import reactor.core.publisher.Mono;
+
+public interface WhatsAppBankingPort {
+    Mono<BankAccount> readAccount(BankAccountNumber accountNumber);
+}

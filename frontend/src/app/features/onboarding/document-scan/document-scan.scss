@@ -26,17 +26,17 @@
 .scan-frame {
     position: absolute;
     inset: 10% 8%;
-    border: 3px solid var(--color-primary);
+    border: 3px solid var(--color-gold);
     border-radius: 10px;
     pointer-events: none;
-    box-shadow: 0 0 0 999px rgba(0, 0, 0, .35)
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, .45);
 }
 
 .scan-feedback {
     min-height: 24px;
     margin: 6px 0 18px;
     font-weight: 700;
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
     text-align: center
 }
 
@@ -46,7 +46,8 @@
     min-height: 220px;
     margin: 14px 0;
     border-radius: 12px;
-    background: var(--color-primary-soft);
+    background: var(--color-gold-soft);
+    border: 1px solid var(--color-gold-border);
     color: var(--color-primary-dark);
     font-weight: 700;
     text-align: center
