@@ -131,9 +131,9 @@ Deux exigences méritent une attention particulière au vu du métier : §13.2 i
 | Modèle web | WebFlux, `starter-web` proscrit | **`starter-web` servlet** |
 | Persistance | R2DBC | **JPA** |
 | Migrations | Liquibase | **Flyway** |
-| Modules Maven | 5 (`domain`, `commons`, `application`, `infrastructure`, `boot`) | **1 seul** |
-| Architecture | hexagonale, domaine pur vérifié au build | **en couches** : `controller`/`dto`/`entity`/`repository`/`service` |
-| Outils qualité (§10) | Spotless, Checkstyle, SpotBugs, SonarQube, enforcer | **aucun** |
+| Modules Maven | 5 (`domain`, `commons`, `application`, `infrastructure`, `boot`) | **1 seul** , *depuis : les 5 modules existent, voir §7* |
+| Architecture | hexagonale, domaine pur vérifié au build | **en couches** : `controller`/`dto`/`entity`/`repository`/`service` , *depuis : pureté du domaine vérifiée au build, contenu à extraire* |
+| Outils qualité (§10) | Spotless, Checkstyle, SpotBugs, SonarQube, enforcer | **aucun** , *depuis : 4 sur 5 en place, voir §7* |
 | Authentification | Resource Server Keycloak | JWT applicatif |
 
 Le versionnement des routes et le Maven Wrapper sont deux points où ce backend fait mieux que `firstagent-backend-afriland`. Tout le reste du socle technique s'en écarte, et davantage : Spring Boot 4 n'est pas seulement en avance sur la version demandée, il change les règles du jeu pour la migration vers WebFlux et R2DBC.
@@ -171,3 +171,61 @@ Aucun chiffrage n'est proposé : il dépend entièrement des arbitrages de la se
 | Backend , versionnement des routes, Maven Wrapper | acquise |
 | Backend , socle technique et architecture | refonte |
 | Gestion des sources | à construire (branches, protection, contrôle des commits) |
+
+---
+
+## 7. Relevé des corrections apportées
+
+Les sections 0 à 6 sont l'audit, daté et laissé tel quel : elles disent ce qui
+a été trouvé. Cette section dit ce qui a été traité depuis, et ce qui reste.
+
+### Traité
+
+**Stockage du PIN dans le navigateur** (section 0). Le PIN ne transite plus par
+`sessionStorage`. Le jeton de session y demeure, écart assumé et documenté dans
+le code : la correction conforme n'est pas de le supprimer mais de porter la
+reprise de parcours par un cookie inaccessible au script, ce que demande la
+charte frontend §13.4.
+
+**Traversée de chemin dans le stockage des pièces.** Signalée par
+FindSecBugs, corrigée et couverte par sept tests. Le nom fourni par le client
+ne compose plus le chemin ; tout accès est confiné au répertoire de dépôt.
+
+**Découpage en cinq modules Maven.** `domain`, `commons`, `application`,
+`infrastructure`, `boot`, avec un sens de dépendance unique. La pureté du
+module `domain` n'est plus affaire de discipline : l'enforcer bannit Spring,
+JPA, Hibernate, Lombok, Jackson et Reactor à chaque compilation.
+
+**Découplage des exceptions métier du transport.** Elles portaient toutes un
+`HttpStatus`, donc une dépendance à Spring jusqu'au cœur du métier. Elles
+portent désormais un `TypeErreurMetier`, et la correspondance vers un code HTTP
+est faite une seule fois, dans le gestionnaire d'exceptions.
+
+**Outillage qualité (§10), quatre outils sur cinq.** Spotless avec
+google-java-format et JaCoCo avec un plancher de non-régression, tous deux
+bloquants ; SpotBugs avec FindSecBugs, non bloquant tant que le parc existant
+n'est pas résorbé ; Checkstyle, bloquant sur les règles de correction et de
+nommage. Manque SonarQube, qui suppose un serveur.
+
+**Migrations destructrices.** `V17` répare les identités écrasées par les
+`UPDATE` sans clause `WHERE` de `V3`, `V10` et `V13`.
+
+### Reste à faire, par ordre de dépendance
+
+1. **Extraction du contenu métier** vers `domain`, `application` et `commons`.
+   Les cinq modules existent et la règle de pureté est tenue, mais le code
+   attend encore dans `infrastructure`. C'est la partie longue.
+2. **Relèvement du plancher de couverture** de 30 % vers les 80 % de la
+   charte §11, par paliers. Le laisser à 30 % reviendrait à s'en accommoder.
+3. **SonarQube**, une fois un serveur disponible.
+4. **Outillage frontend** : dépôt Nexus, ESLint, crochet de pré-commit,
+   préfixe `afb-`, jetons de couleur, polices locales, `OnPush`.
+5. **Gestion des sources** : branche `develop`, protection de `main`,
+   convention `feature/<ticket>-<libellé>`, contrôle automatisé des commits.
+
+### Suspendu sur décision
+
+La rétrogradation de Spring Boot 4 vers 3.5.x, et avec elle le passage à
+WebFlux et R2DBC, est écartée du périmètre actuel. Ce n'est pas une mise à
+niveau mais une refonte du socle, et elle relève d'un arbitrage de comité au
+même titre que le choix du framework frontend et l'absence de Keycloak.
