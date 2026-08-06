@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-loader',
+  selector: 'afb-loader',
   imports: [],
   templateUrl: './loader.html',
   styleUrl: './loader.scss',

@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
+import { errorMessage } from '../../../core/utils/error-message';
+import { NavigationService } from '../../../core/services/navigation';
 import { Component, DestroyRef, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
-import { Router } from '@angular/router';
 import { CameraService } from '../../../core/services/camera';
 import { DocumentService } from '../../../core/services/document';
 import { QualityReport, analyzeImageQuality, computeCoverSourceRect } from '../../../core/services/image-quality-analyzer';
@@ -16,17 +17,17 @@ const ANALYSIS_WIDTH = 200;
 const ANALYSIS_HEIGHT = 150;
 
 @Component({
-  selector: 'app-document-scan',
+  selector: 'afb-document-scan',
   imports: [],
   templateUrl: './document-scan.html',
   styleUrl: './document-scan.scss'
 })
 export class DocumentScan {
+  private readonly navigation = inject(NavigationService);
   readonly lang = inject(LanguageService);
 
   private readonly camera = inject(CameraService);
   private readonly docs = inject(DocumentService);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly location = inject(Location);
 
@@ -52,7 +53,7 @@ export class DocumentScan {
 
   useManualUpload(): void {
     this.pauseCapture();
-    this.router.navigateByUrl('/onboarding/document-upload');
+    this.navigation.navigateTo('/onboarding/document-upload');
   }
 
   goBack(): void {
@@ -162,13 +163,13 @@ export class DocumentScan {
 
   private extract(): void {
     this.docs.extractOcrData().subscribe({
-      next: () => this.router.navigateByUrl('/onboarding/document-ocr-review'),
+      next: () => this.navigation.navigateTo('/onboarding/document-ocr-review'),
       error: e => this.fail(e)
     });
   }
 
   private fail(e: unknown): void {
-    this.error.set((e as any)?.error?.message ?? (e as any)?.message ?? 'Le traitement du document a échoué.');
+    this.error.set(errorMessage(e, 'Le traitement du document a échoué.'));
     this.step.set('FRONT');
     this.frontBlob = null;
     this.backBlob = null;

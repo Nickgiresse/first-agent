@@ -4,7 +4,7 @@ import { OnboardingState } from '../../../core/services/onboarding-state';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { LanguageService } from '../../../core/services/language';
 
-@Component({ selector: 'app-welcome', imports: [RouterLink], templateUrl: './welcome.html', styleUrl: './welcome.scss' })
+@Component({ selector: 'afb-welcome', imports: [RouterLink], templateUrl: './welcome.html', styleUrl: './welcome.scss' })
 export class Welcome implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly state = inject(OnboardingState);

@@ -1,18 +1,19 @@
 import { Location } from '@angular/common';
+import { errorMessage } from '../../../core/utils/error-message';
+import { NavigationService } from '../../../core/services/navigation';
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { DocumentService } from '../../../core/services/document';
 
 @Component({
-  selector: 'app-document-upload',
+  selector: 'afb-document-upload',
   standalone: true,
   imports: [],
   templateUrl: './document-upload.html',
   styleUrl: './document-upload.scss'
 })
 export class DocumentUpload {
+  private readonly navigation = inject(NavigationService);
   private readonly docs = inject(DocumentService);
-  private readonly router = inject(Router);
   private readonly location = inject(Location);
 
   readonly front = signal<File | null>(null);
@@ -75,13 +76,13 @@ export class DocumentUpload {
   private extract(): void {
     this.statusMessage.set('Analyse qualité & extraction OCR par le moteur Python...');
     this.docs.extractOcrData().subscribe({
-      next: () => this.router.navigateByUrl('/onboarding/document-ocr-review'),
+      next: () => this.navigation.navigateTo('/onboarding/document-ocr-review'),
       error: e => this.fail(e)
     });
   }
 
   private fail(e: unknown): void {
-    const msg = (e as any)?.error?.message ?? (e as any)?.message ?? 'Le traitement de la pièce d’identité a échoué.';
+    const msg = errorMessage(e, 'Le traitement de la pièce d’identité a échoué.');
     this.error.set(msg);
     this.sending.set(false);
   }

@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
+import { NavigationService } from '../../../core/services/navigation';
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { LanguageService } from '../../../core/services/language';
 
@@ -15,14 +15,14 @@ import { LanguageService } from '../../../core/services/language';
  *  3. mentions obligatoires affichées (anti-phishing, finalité biométrique, contact DPO).
  */
 @Component({
-  selector: 'app-terms-conditions',
+  selector: 'afb-terms-conditions',
   imports: [],
   templateUrl: './terms-conditions.html',
   styleUrl: './terms-conditions.scss'
 })
 export class TermsConditions {
+  private readonly navigation = inject(NavigationService);
   private readonly service = inject(OnboardingService);
-  private readonly router = inject(Router);
   private readonly location = inject(Location);
   readonly lang = inject(LanguageService);
 
@@ -56,7 +56,7 @@ export class TermsConditions {
     this.error.set(null);
     this.service.acceptTerms({ termsAccepted: true }).subscribe({
       next: () => this.service.completeOnboarding().subscribe({
-        next: () => this.router.navigateByUrl('/onboarding/success'),
+        next: () => this.navigation.navigateTo('/onboarding/success'),
         error: err => {
           // Échec de finalisation (ex. écriture refusée côté banque) : le dossier reste intact,
           // le client peut réessayer sans recommencer le parcours.

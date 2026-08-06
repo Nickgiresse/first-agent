@@ -2,7 +2,7 @@ import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, forwardR
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
-  selector: 'app-account-number-input',
+  selector: 'afb-account-number-input',
   standalone: true,
   templateUrl: './account-number-input.html',
   styleUrl: './account-number-input.scss',
@@ -21,7 +21,15 @@ export class AccountNumberInput implements ControlValueAccessor {
     this.writeValue(val);
   }
   @Output() valueChange = new EventEmitter<string>();
-  @Output() blur = new EventEmitter<void>();
+  /**
+   * Perte de focus du champ.
+   *
+   * Nommée `blurred` et non `blur` : une sortie portant le nom d'un événement
+   * DOM standard le masque. Un parent écrivant `(blur)` sur ce composant
+   * recevrait cette sortie et non l'événement du navigateur, sans que rien ne
+   * signale la substitution.
+   */
+  @Output() blurred = new EventEmitter<void>();
 
   @ViewChild('inputRef') inputRef!: ElementRef<HTMLInputElement>;
 
@@ -145,6 +153,6 @@ export class AccountNumberInput implements ControlValueAccessor {
 
   handleBlur(): void {
     this.onTouched();
-    this.blur.emit();
+    this.blurred.emit();
   }
 }

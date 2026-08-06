@@ -1,7 +1,7 @@
 import { Location } from '@angular/common';
+import { NavigationService } from '../../../core/services/navigation';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { OnboardingState } from '../../../core/services/onboarding-state';
 import { LanguageService } from '../../../core/services/language';
@@ -10,13 +10,13 @@ type Phase = 'EMAIL' | 'OTP';
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
-@Component({ selector: 'app-kyc', imports: [ReactiveFormsModule], templateUrl: './kyc.html', styleUrl: './kyc.scss' })
+@Component({ selector: 'afb-kyc', imports: [ReactiveFormsModule], templateUrl: './kyc.html', styleUrl: './kyc.scss' })
 export class Kyc {
+  private readonly navigation = inject(NavigationService);
   readonly lang = inject(LanguageService);
 
   private readonly state = inject(OnboardingState);
   private readonly service = inject(OnboardingService);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly location = inject(Location);
 
@@ -94,7 +94,7 @@ export class Kyc {
     this.service.verifyEmailOtp({ code: this.code.value }).subscribe({
       next: () => {
         this.state.setEmail(this.email.value);
-        this.router.navigateByUrl('/onboarding/pin-creation');
+        this.navigation.navigateTo('/onboarding/pin-creation');
       },
       error: err => {
         this.error.set(err?.message ?? err?.error?.message ?? 'Code de vérification incorrect.');

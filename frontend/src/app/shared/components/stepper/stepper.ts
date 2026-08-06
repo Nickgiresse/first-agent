@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-stepper',
+  selector: 'afb-stepper',
   imports: [],
   templateUrl: './stepper.html',
   styleUrl: './stepper.scss',

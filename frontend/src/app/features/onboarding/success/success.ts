@@ -16,7 +16,7 @@ const CONFETTI_COLORS = ['#e30613', '#ffb400', '#2ecc71', '#3498db', '#9b59b6', 
 const CONFETTI_COUNT = 60;
 
 @Component({
-  selector: 'app-success',
+  selector: 'afb-success',
   imports: [],
   templateUrl: './success.html',
   styleUrl: './success.scss'

@@ -35,12 +35,12 @@
             <label class="field-label" for="accountSuffix">Numéro de compte</label>
             <div class="account-field">
                 <span class="account-prefix">10005</span>
-                <app-account-number-input
+                <afb-account-number-input
                     [value]="digits()"
                     (valueChange)="onAccountDigitsChange($event)"
-                    (blur)="touched.set(true)"
+                    (blurred)="touched.set(true)"
                     placeholder="12345 67890123456 78">
-                </app-account-number-input>
+                </afb-account-number-input>
             </div>
 @if (touched() && !valid()) { <span class="form-error">Veuillez
                 saisir exactement 18 chiffres.</span> } @if (error()) { <span class="form-error">{{ error() }}</span>
