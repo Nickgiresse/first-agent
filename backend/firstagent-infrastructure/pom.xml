@@ -64,6 +64,18 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+		<!--
+		  Tests unitaires du code de ce module. La charte §11 demande des
+		  paquets de test en miroir du code testé ; les garder dans boot
+		  empêchait en outre toute mesure de couverture, JaCoCo rapportant
+		  par module.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 </project>

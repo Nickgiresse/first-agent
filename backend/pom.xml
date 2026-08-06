@@ -106,6 +106,66 @@
 		</pluginManagement>
 		<plugins>
 			<!--
+			  Couverture de tests (charte §11). Le seuil visé est 80 %, mais le
+			  rendre bloquant aujourd'hui casserait le build : la couverture
+			  réelle en est loin. La mesure est donc activée d'abord, le seuil
+			  sera relevé par paliers à mesure que les tests arrivent.
+			  Rapport : firstagent-*/target/site/jacoco/index.html
+			-->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.13</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>rapport</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<!--
+					  Cliquet de non-régression. Mesure du 06/08/2026 : 34 % sur
+					  4 383 instructions. Le plancher est fixé juste en dessous
+					  pour ne pas rendre le build instable, et sa seule fonction
+					  est d'empêcher la couverture de baisser.
+
+					  Il doit être relevé à chaque palier gagné, jusqu'aux 80 %
+					  exigés par la charte §11. Le laisser à 30 % indéfiniment
+					  reviendrait à s'en accommoder.
+					-->
+					<execution>
+						<id>plancher-de-couverture</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>INSTRUCTION</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.30</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+							<haltOnFailure>true</haltOnFailure>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--
 			  Verrouillage des versions de Java et de Maven (charte §2). Sans
 			  lui, un poste avec un autre JDK produit un artefact différent
 			  sans que rien ne le signale.
