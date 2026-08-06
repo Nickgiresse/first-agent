@@ -6,6 +6,7 @@ import com.firstagent.backend.common.enums.LivenessStatus;
 import com.firstagent.backend.common.enums.OcrStatus;
 import com.firstagent.backend.common.enums.OnboardingStatus;
 import com.firstagent.backend.common.exception.BusinessException;
+import com.firstagent.backend.common.exception.TypeErreurMetier;
 import com.firstagent.backend.common.exception.InvalidPinException;
 import com.firstagent.backend.document.entity.CustomerDocument;
 import com.firstagent.backend.document.entity.DocumentOcrResult;
@@ -109,7 +110,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         if (customerRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("Cette adresse e-mail est déjà utilisée par un autre utilisateur.", HttpStatus.CONFLICT);
+            throw new BusinessException("Cette adresse e-mail est déjà utilisée par un autre utilisateur.", TypeErreurMetier.CONFLIT);
         }
 
         String code = generateOtpCode();
@@ -189,7 +190,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         if (customerRepository.findByBankAccount_AccountNumber(session.getBankAccount().getAccountNumber()).isPresent()) {
-            throw new BusinessException("Un utilisateur existe déjà pour ce numéro de compte. Utilisez la réinitialisation de PIN si nécessaire.", HttpStatus.CONFLICT);
+            throw new BusinessException("Un utilisateur existe déjà pour ce numéro de compte. Utilisez la réinitialisation de PIN si nécessaire.", TypeErreurMetier.CONFLIT);
         }
 
         session.setPinHash(pinService.hashPin(pinRequest.getPin()));

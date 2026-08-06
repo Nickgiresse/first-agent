@@ -7,6 +7,7 @@ import com.firstagent.backend.account.repository.BankAccountRepository;
 import com.firstagent.backend.common.enums.OnboardingStatus;
 import com.firstagent.backend.common.exception.AccountNotFoundException;
 import com.firstagent.backend.common.exception.BusinessException;
+import com.firstagent.backend.common.exception.TypeErreurMetier;
 import com.firstagent.backend.common.security.SecureSessionTokenGenerator;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
@@ -51,7 +52,7 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() -> new AccountNotFoundException("Aucun compte bancaire trouvé avec ce numéro")));
 
         if (!bankAccount.isEligible()) {
-            throw new BusinessException("Ce compte n'est pas éligible à l'onboarding digital", HttpStatus.FORBIDDEN);
+            throw new BusinessException("Ce compte n'est pas éligible à l'onboarding digital", TypeErreurMetier.INTERDIT);
         }
 
         // Contrôle d'appartenance : le numéro qui réalise le parcours doit être
@@ -103,7 +104,7 @@ public class AccountServiceImpl implements AccountService {
                 "Nous n'avons pas pu confirmer que ce compte est bien le vôtre : aucun numéro "
                     + "de téléphone n'y est enregistré. Présentez-vous dans l'agence Afriland "
                     + "First Bank la plus proche avec votre pièce d'identité.",
-                HttpStatus.FORBIDDEN);
+                TypeErreurMetier.INTERDIT);
         }
 
         if (!telephoneDuCompte.equals(telephoneDemandeur)) {
@@ -113,7 +114,7 @@ public class AccountServiceImpl implements AccountService {
                 "Ce numéro de compte n'est pas associé au numéro WhatsApp depuis lequel vous "
                     + "faites la demande. Utilisez le numéro enregistré sur votre compte, ou "
                     + "présentez-vous en agence avec votre pièce d'identité.",
-                HttpStatus.FORBIDDEN);
+                TypeErreurMetier.INTERDIT);
         }
     }
 

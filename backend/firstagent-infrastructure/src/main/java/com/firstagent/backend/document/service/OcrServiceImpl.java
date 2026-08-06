@@ -3,6 +3,7 @@ package com.firstagent.backend.document.service;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.OcrStatus;
 import com.firstagent.backend.common.exception.BusinessException;
+import com.firstagent.backend.common.exception.TypeErreurMetier;
 import com.firstagent.backend.common.exception.ResourceNotFoundException;
 import com.firstagent.backend.common.util.StringSimilarity;
 import com.firstagent.backend.document.dto.OcrConfirmationRequest;
@@ -225,7 +226,7 @@ public class OcrServiceImpl implements OcrService {
         if (firstNameSimilarity < identityNameSimilarityThreshold || lastNameSimilarity < identityNameSimilarityThreshold) {
             throw new BusinessException(
                 "L'identité extraite du document ne correspond pas au titulaire du compte bancaire. Contactez le support si vous pensez qu'il s'agit d'une erreur.",
-                HttpStatus.CONFLICT
+                TypeErreurMetier.CONFLIT
             );
         }
     }
