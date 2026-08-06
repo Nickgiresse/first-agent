@@ -47,6 +47,34 @@ app:
     from-address: ${MAIL_FROM_ADDRESS:agent_dri_03@afrilandfirstbank.com}
   jwt:
     secret: ${JWT_SECRET}
+
+  # Journal forensique scellé.
+  audit:
+    # Clé de scellement HMAC-SHA256, 32 octets au minimum.
+    #
+    # Elle ne doit JAMAIS être versionnée ni rangée à côté de la base : une clé
+    # posée près des données qu'elle protège ne protège de rien face à qui a la
+    # main sur la machine. En production elle vient d'un coffre, et le service
+    # refuse de démarrer sans elle. Vide en développement : une clé éphémère est
+    # alors utilisée, et le journal redevient invérifiable au redémarrage.
+    hmac-key: ${AUDIT_HMAC_KEY:}
+
+  # Alertes comportementales balayant le journal.
+  alertes:
+    # L'envoi de courriel est indépendant de la détection : les alertes sont
+    # toujours écrites dans le journal scellé, qu'un serveur de messagerie
+    # réponde ou non.
+    envoi-actif: ${ALERTES_ENVOI_ACTIF:false}
+    # Plusieurs adresses acceptées : une alerte de sécurité concerne rarement
+    # une seule personne, et faire dépendre la chaîne d'alerte de la
+    # disponibilité d'un individu est un point de rupture.
+    destinataires: ${ALERTES_DESTINATAIRES:}
+    intervalle-balayage-ms: ${ALERTES_INTERVALLE_MS:300000}
+    # Seuils. Un seuil à zéro désactive la règle correspondante.
+    seuil-kyc-echecs: ${ALERTES_SEUIL_KYC:2}
+    seuil-otp-errones: ${ALERTES_SEUIL_OTP:3}
+    seuil-vivacite-echecs: ${ALERTES_SEUIL_VIVACITE:3}
+
   # Microservice Python de vision (OCR, visage, vivacité, comparaison biométrique) — remplace
   # Mindee/AWS/CompreFace. Point d'entrée unique, jamais appelé directement par Angular.
   vision-service:
