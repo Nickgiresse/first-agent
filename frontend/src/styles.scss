@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@use 'styles/polices' as polices;
 
 :root {
   --color-primary: #c8102e;
@@ -9,8 +9,10 @@
   --color-border: #d8dce3;
   --color-surface: #ffffff;
   --color-canvas: #f5f6f8;
-  --font-ui: 'DM Sans', Arial, sans-serif;
-  --font-display: 'Manrope', Arial, sans-serif;
+  // Les familles de marque restent en tête : elles prennent le relais d'elles-mêmes
+  // dès que les fichiers sont déposés et le drapeau de styles/_polices.scss activé.
+  --font-ui: 'DM Sans', #{polices.$pile-systeme};
+  --font-display: 'Manrope', #{polices.$pile-systeme};
   --shadow: 0 16px 36px rgba(31, 18, 22, .08);
 }
 

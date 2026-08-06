@@ -23,7 +23,7 @@ Client network socket disconnected before secure TLS connection was established
 | Hôte | État | Ce qu'il empêche |
 |---|---|---|
 | `storage.googleapis.com` | **bloqué** | modèles MediaPipe (visage, vivacité) |
-| `fonts.googleapis.com` | **bloqué** | polices du frontend, build de production |
+| `fonts.googleapis.com` | **bloqué** | polices du frontend — RÉSOLU, polices embarquées (§2.2) |
 | `registry.npmjs.org` | **bloqué** | `npm install` en direct |
 | `github.com` (HTTPS) | **bloqué** | `git clone`/`push` en HTTPS |
 | `huggingface.co` | accessible | — |
@@ -63,37 +63,43 @@ Ces fichiers ne doivent **pas** être versionnés : ils sont volumineux et
 `weights/` doit rester hors dépôt. Les transporter par clé USB ou partage
 interne.
 
-### 2.2 Polices du frontend — débloque le build de production
+### 2.2 Polices du frontend — RÉSOLU le 06/08/2026
 
-`frontend/src/styles.scss` importe les polices depuis Internet :
+**Ce point ne bloque plus rien.** Il est conservé parce qu'il illustre bien la
+nature du problème et la façon de le traiter.
+
+`frontend/src/styles.scss` importait les polices depuis Internet :
 
 ```scss
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;...');
 ```
 
-Angular tente de les incorporer au build et **échoue** :
+Angular tentait de les incorporer au build de production et **échouait**.
+`ng build --configuration development` passait, lui, car il n'incorpore pas les
+polices : le défaut ne se manifestait donc qu'au moment de livrer.
 
-```
-X [ERROR] Failed to inline external stylesheet
-  'https://fonts.googleapis.com/css2?family=DM+Sans...'
-  Error: Inlining of fonts failed.
-```
+Ce n'était pas qu'un problème de poste. La charte backend §12 impose des builds
+hors ligne et la charte frontend §20.2 l'hébergement local des polices : une
+chaîne d'intégration dans le réseau de la banque aurait rencontré exactement la
+même erreur.
 
-`ng build --configuration development` passe, car il n'incorpore pas les
-polices. Seul le build de production est bloqué.
+**Correction apportée.** Les huit fichiers `woff2` sont désormais dans
+`frontend/public/assets/fonts/`, extraits des paquets `@fontsource`,
+sous-ensemble latin, 113 Ko au total. L'`@import` distant est remplacé par des
+déclarations `@font-face` locales dans `src/styles/_polices.scss`, avec
+`font-display: swap`. Le build de production aboutit sans aucun accès réseau,
+et plus aucune URL distante ne figure dans la sortie.
 
-**Ce n'est pas qu'un problème de poste** : la charte DSI impose des builds
-*air-gapped*, et une chaîne d'intégration dans le réseau de la banque
-rencontrera exactement la même erreur. Il faut donc embarquer les polices
-dans le dépôt, ce qui est de toute façon la bonne pratique :
+Deux pièges rencontrés, notés pour qui referait le chemin :
 
-1. Récupérer les fichiers `.woff2` de **DM Sans** (400, 500, 600, 700) et
-   **Manrope** (500, 600, 700, 800).
-2. Les placer dans `frontend/public/fonts/`.
-3. Remplacer l'`@import` par des déclarations `@font-face` locales, avec
-   `font-display: swap`.
-
-Après quoi `ng build` doit passer sans accès réseau.
+- **Le miroir npm est intermittent, pas bloqué.** Un premier `npm view` a
+  échoué en erreur réseau, un second a répondu. Il vaut donc la peine de
+  réessayer avant de conclure à l'inaccessibilité.
+- **`angular.json` ne sert que `public/`.** Des polices placées sous
+  `src/assets/` sont correctement référencées par la feuille de style mais ne
+  sont pas copiées dans la sortie : les URL répondent 404 et le navigateur
+  retombe silencieusement sur la police système. Le build ne signale rien, et
+  le défaut ne se voit qu'à l'œil sur une page rendue.
 
 ---
 
