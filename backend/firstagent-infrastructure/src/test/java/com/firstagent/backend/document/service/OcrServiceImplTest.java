@@ -6,9 +6,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.firstagent.backend.account.entity.BankAccount;
+import com.firstagent.backend.audit.model.EvenementAudit;
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.OcrStatus;
 import com.firstagent.backend.common.exception.BusinessException;
@@ -30,6 +33,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -37,6 +41,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class OcrServiceImplTest {
 
+  @Mock private JournalAudit journal;
   @Mock private StagingDocumentRepository stagingDocumentRepository;
   @Mock private StagingOcrResultRepository stagingOcrResultRepository;
   @Mock private OnboardingSessionService onboardingSessionService;
@@ -52,6 +57,7 @@ class OcrServiceImplTest {
   void setUp() {
     ocrService =
         new OcrServiceImpl(
+            journal,
             stagingDocumentRepository,
             stagingOcrResultRepository,
             onboardingSessionService,
@@ -381,6 +387,52 @@ class OcrServiceImplTest {
     assertThatThrownBy(() -> ocrService.confirmExtractedData(sessionToken, request))
         .isInstanceOf(BusinessException.class)
         .hasMessageContaining("titulaire du compte");
+
+    // Le refus doit laisser une trace : une tentative isolée peut être une
+    // faute de frappe, leur répétition sur un même compte ne l'est pas, et
+    // c'est ce que les règles d'alerte cherchent.
+    ArgumentCaptor<JournalAudit.EcritureAudit> trace =
+        ArgumentCaptor.forClass(JournalAudit.EcritureAudit.class);
+    verify(journal).enregistrer(trace.capture());
+    assertThat(trace.getValue().typeEvenement()).isEqualTo(EvenementAudit.CONTROLE_KYC);
+    assertThat(trace.getValue().statut()).isEqualTo("FAILURE");
+    // Les similarités mesurées, jamais l'identité en clair.
+    assertThat(trace.getValue().details()).contains("similarité").doesNotContain("Quelquun");
+  }
+
+  @Test
+  void confirmExtractedDataNeJournalisePasQuandLIdentiteCorrespond() {
+    OnboardingSession session = session("Marie", "Fotso");
+    StagingOcrResult existing =
+        StagingOcrResult.builder()
+            .id(UUID.randomUUID())
+            .onboardingSession(session)
+            .documentKind("CNI")
+            .status(OcrStatus.EXTRACTED)
+            .ocrProvider("PYTHON_VISION")
+            .firstName("Marie")
+            .lastName("Fotso")
+            .documentNumber("987654321")
+            .birthDate(LocalDate.of(1985, 5, 5))
+            .build();
+
+    OcrConfirmationRequest request = new OcrConfirmationRequest();
+    request.setFirstName("Marie");
+    request.setLastName("Fotso");
+    request.setDocumentNumber("987654321");
+    request.setBirthDate(LocalDate.of(1985, 5, 5));
+    request.setExpiryDate(LocalDate.now().plusYears(3));
+
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+    when(stagingOcrResultRepository.findByOnboardingSession_Id(sessionId))
+        .thenReturn(Optional.of(existing));
+    when(stagingOcrResultRepository.save(any(StagingOcrResult.class))).thenReturn(existing);
+
+    ocrService.confirmExtractedData(sessionToken, request);
+
+    // Un parcours nominal ne doit rien écrire : un journal qui enregistre tout
+    // noie le signal et devient illisible au moment où on en a besoin.
+    verifyNoInteractions(journal);
   }
 
   @Test

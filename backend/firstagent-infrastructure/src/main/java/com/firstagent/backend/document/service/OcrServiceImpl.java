@@ -1,5 +1,8 @@
 package com.firstagent.backend.document.service;
 
+import com.firstagent.backend.audit.model.EvenementAudit;
+import com.firstagent.backend.audit.model.TypeActeur;
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.OcrStatus;
 import com.firstagent.backend.common.exception.BusinessException;
@@ -42,6 +45,7 @@ public class OcrServiceImpl implements OcrService {
   @Value("${app.identity.name-similarity-threshold:0.70}")
   private double identityNameSimilarityThreshold;
 
+  private final JournalAudit journal;
   private final StagingDocumentRepository stagingDocumentRepository;
   private final StagingOcrResultRepository stagingOcrResultRepository;
   private final OnboardingSessionService onboardingSessionService;
@@ -168,8 +172,7 @@ public class OcrServiceImpl implements OcrService {
       ensureDocumentNumberMatchesExtraction(
           ocrResult.getDocumentNumber(), request.getDocumentNumber());
     }
-    ensureMatchesAccountHolder(
-        session.getBankAccount().getFirstName(), session.getBankAccount().getLastName(), request);
+    ensureMatchesAccountHolder(session, request);
 
     ocrResult.setFirstName(request.getFirstName());
     ocrResult.setLastName(request.getLastName());
@@ -242,14 +245,43 @@ public class OcrServiceImpl implements OcrService {
     }
   }
 
+  /**
+   * Refuse une pièce dont l'identité ne correspond pas au titulaire du compte.
+   *
+   * <p>C'est le contrôle anti-usurpation du parcours : sans lui, quiconque connaît un numéro de
+   * compte pourrait y rattacher sa propre pièce d'identité. Le refus est journalisé, car une
+   * tentative isolée peut être une erreur de saisie mais leur répétition sur un même numéro ne
+   * l'est pas ; c'est ce que les règles d'alerte cherchent.
+   */
   private void ensureMatchesAccountHolder(
-      String accountFirstName, String accountLastName, OcrConfirmationRequest request) {
+      OnboardingSession session, OcrConfirmationRequest request) {
+    String accountFirstName = session.getBankAccount().getFirstName();
+    String accountLastName = session.getBankAccount().getLastName();
+
     double firstNameSimilarity =
         StringSimilarity.similarity(accountFirstName, request.getFirstName());
     double lastNameSimilarity = StringSimilarity.similarity(accountLastName, request.getLastName());
 
     if (firstNameSimilarity < identityNameSimilarityThreshold
         || lastNameSimilarity < identityNameSimilarityThreshold) {
+      journal.enregistrer(
+          JournalAudit.EcritureAudit.echec(
+              session.getPhoneNumber(),
+              EvenementAudit.CONTROLE_KYC,
+              // L'acteur est le client, seul intervenant à ce stade du parcours.
+              // La valeur de repli garde l'entrée exploitable même si le numéro
+              // manque : une trace anonyme vaut mieux qu'une trace absente.
+              session.getPhoneNumber() == null || session.getPhoneNumber().isBlank()
+                  ? "session:" + session.getId()
+                  : session.getPhoneNumber(),
+              TypeActeur.CLIENT,
+              // Les similarités, pas les noms : le journal dit qu'un contrôle a
+              // échoué et à quel point, sans recopier l'identité en clair.
+              "Identité du document non conforme au titulaire du compte "
+                  + String.format(
+                      "(similarité prénom %.2f, nom %.2f, seuil %.2f)",
+                      firstNameSimilarity, lastNameSimilarity, identityNameSimilarityThreshold)));
+
       throw new BusinessException(
           "L'identité extraite du document ne correspond pas au titulaire du compte bancaire. Contactez le support si vous pensez qu'il s'agit d'une erreur.",
           TypeErreurMetier.CONFLIT);
