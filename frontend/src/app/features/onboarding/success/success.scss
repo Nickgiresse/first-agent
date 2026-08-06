@@ -7,7 +7,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: radial-gradient(circle at top, #fff0f2, transparent 38%), #fff
+    background: radial-gradient(circle at top, var(--color-primary-soft), transparent 38%), var(--color-surface)
 }
 
 .success section {
@@ -68,7 +68,7 @@
     height: 76px;
     margin: 26px auto;
     border-radius: 50%;
-    background: #fff0f2;
+    background: var(--color-primary-soft);
     color: var(--color-primary);
     font-size: 40px;
     font-weight: 800

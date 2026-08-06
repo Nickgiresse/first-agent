@@ -6,7 +6,7 @@
 
 .welcome-info {
     padding: 50px;
-    background: #f4f5f7;
+    background: var(--color-canvas);
     display: flex;
     flex-direction: column
 }
@@ -63,7 +63,7 @@
     display: grid;
     place-items: center;
     padding: 40px;
-    background: radial-gradient(circle at top right, #fff0f2 0, transparent 38%), #fff
+    background: radial-gradient(circle at top right, var(--color-primary-soft) 0, transparent 38%), var(--color-surface)
 }
 
 .welcome-panel {

@@ -10,7 +10,7 @@
     margin: 14px auto;
     border-radius: 50%;
     overflow: hidden;
-    background: #000
+    background: var(--color-camera-backdrop)
 }
 
 .liveness-viewport video {
@@ -29,7 +29,7 @@
     padding: 8px 12px;
     border-radius: 10px;
     background: rgba(0, 0, 0, .55);
-    color: #fff;
+    color: var(--color-surface);
     font-weight: 700;
     text-align: center
 }
