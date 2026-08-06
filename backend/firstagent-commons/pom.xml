@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.firstagent</groupId>
+		<artifactId>backend</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>firstagent-commons</artifactId>
+	<name>firstagent-commons</name>
+	<description>Briques techniques transverses : enveloppe web, ProblemDetail, entite de base.</description>
+
+	<!-- Encore vide : le code correspondant attend dans infrastructure et sera
+	     extrait aux passes suivantes du découpage (voir le POM parent). -->
+
+	<dependencies>
+		<dependency>
+			<groupId>com.firstagent</groupId>
+			<artifactId>firstagent-domain</artifactId>
+		</dependency>
+	</dependencies>
+
+</project>
