@@ -54,7 +54,7 @@ La charte frontend §3.4 impose que tout nouveau projet soit issu du socle fourn
 
 ---
 
-## 2. Frontend — charte v1.1
+## 2. Frontend , charte v1.1
 
 ### 2.1 Conforme
 
@@ -77,16 +77,50 @@ La charte frontend §3.4 impose que tout nouveau projet soit issu du socle fourn
 | **Contrôle avant commit** (§7.1) | aucun hook |
 | **Porte SonarQube** (§7.3) | aucune analyse ; couverture non mesurée, seuil 80 % sur le code nouveau |
 | **Audit des dépendances** (§3.3) | non exécuté |
-| **Jetons hors stockage navigateur** (§12.4) | jeton de session **et PIN** en `sessionStorage` — voir §0 |
-| **Intégration Keycloak** (§12) | absente — voir §1.2 |
+| **Jetons hors stockage navigateur** (§12.4) | jeton de session **et PIN** en `sessionStorage` , voir §0 |
+| **Intégration Keycloak** (§12) | absente , voir §1.2 |
 
-### 2.3 Non vérifié
+### 2.3 Second passage , sections 5 à 23
 
-Les sections 5, 8, 10, 11, 13 à 17 et 19 à 23 n'ont pas été dépouillées : nommage, gestion d'état, routage, formulaires, fichiers, design system, accessibilité, internationalisation, résilience réseau, performance, compatibilité, tests et livraison. Un second passage est nécessaire pour une conformité complète.
+La charte a été dépouillée intégralement le 06/08. Constats complémentaires.
+
+#### Conforme
+
+| Exigence | Constat |
+|---|---|
+| Répertoires et fichiers en kebab-case (§5) | respecté |
+| `noImplicitReturns`, `noFallthroughCasesInSwitch` (§6.1) | activés |
+| Parcours long découpé en étapes avec progression et retour (§13.4) | respecté |
+| Budgets de paquet déclarés dans `angular.json` (§20.1) | présents |
+| Paquet initial ≤ 300 Ko pour une application publique (§20.1) | 9 Ko |
+| Suite de tests présente (§22) | 24 fichiers de test |
+
+#### Non conforme
+
+| Exigence | Constat |
+|---|---|
+| **Options TypeScript du socle minimal** (§6.1) | 5 des 8 manquent : `noImplicitAny`, `strictNullChecks`, `noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames` |
+| **Interdiction du type `any`** (§6.2) | 3 occurrences dans le code applicatif |
+| **Sélecteurs Angular préfixés `afb-`** (§5) | tous en `app-` |
+| **Aucune donnée personnelle dans le navigateur** (§13.4) | PIN et jeton en `sessionStorage` , voir §0 |
+| **Aucune conservation locale des données sensibles** (§13.2) | même constat |
+| **Jetons de couleur, aucun hexadécimal en composant** (§15.1) | 24 valeurs hexadécimales dans les feuilles de composants |
+| **Polices hébergées localement** (§20.2) | importées depuis `fonts.googleapis.com` |
+| **Détection de changement `OnPush`** (§20.3) | aucun composant |
+| **Matrice de navigateurs consignée** (§21) | ni `.browserslistrc`, ni champ `browserslist`, ni mention au README |
+| **Couverture ≥ 80 %, et 100 % sur les règles réglementaires** (§22.1) | non mesurée |
+| **Branches `develop`, `feature/<ticket>-<libellé>`** (§23.1) | ni `develop`, ni convention de ticket ; `main` non protégée, écritures directes |
+| **Conventional Commits contrôlés automatiquement** (§23.2) | 10 sur les 20 derniers, aucun contrôle |
+
+#### À vérifier autrement
+
+L'accessibilité (§16, niveau AA du WCAG 2.1), les seuils de performance mesurés (LCP, CLS, INP, Lighthouse) et le comportement en réseau dégradé (§19) ne se constatent pas par lecture du code : ils demandent un audit outillé sur l'application en fonctionnement. Le paquet initial de 9 Ko est le seul indicateur de performance mesurable en l'état, et il est très en deçà du budget.
+
+Deux exigences méritent une attention particulière au vu du métier : §13.2 impose pour les données sensibles que l'autocomplétion soit désactivée et qu'aucune valeur ne soit préremplie, et §19.1 interdit de mettre une opération financière en file d'attente locale pour la rejouer au retour du réseau. Ni l'une ni l'autre n'a été vérifiée.
 
 ---
 
-## 3. Backend — charte v1.0
+## 3. Backend , charte v1.0
 
 | Exigence | Attendu | Constaté |
 |---|---|---|
@@ -108,7 +142,7 @@ Le versionnement des routes et le Maven Wrapper sont deux points où ce backend 
 
 ## 4. Défauts relevés hors charte
 
-**Migrations destructrices.** `V3`, `V10` et `V13` contiennent des `UPDATE bank_accounts SET ...` **sans clause `WHERE`** : elles réécrivent l'identité de *tous* les titulaires. `V13` renomme chaque compte en « BRYAN DONGMO DJOUAKA », ce qui fait échouer `BankAccountIdentityTest` — le test a raison, la migration a tort. Bénin sur des données de test, destructeur sur une vraie base.
+**Migrations destructrices.** `V3`, `V10` et `V13` contiennent des `UPDATE bank_accounts SET ...` **sans clause `WHERE`** : elles réécrivent l'identité de *tous* les titulaires. `V13` renomme chaque compte en « BRYAN DONGMO DJOUAKA », ce qui fait échouer `BankAccountIdentityTest` , le test a raison, la migration a tort. Bénin sur des données de test, destructeur sur une vraie base.
 
 **Build de production impossible sans Internet.** `frontend/src/styles.scss` importe les polices depuis `fonts.googleapis.com`. La charte backend §12 impose des builds *air-gapped* ; une chaîne d'intégration interne butera sur la même erreur. Voir `RESEAU_RESSOURCES_BLOQUEES.md`.
 
@@ -120,6 +154,20 @@ Le versionnement des routes et le Maven Wrapper sont deux points où ce backend 
 
 ## 5. Ce que ce document ne couvre pas
 
-La charte frontend compte 23 sections ; quatre ont été dépouillées. Les exigences de test, de performance, d'accessibilité et de livraison restent à confronter au code.
+La charte frontend a été dépouillée intégralement. Trois exigences échappent toutefois à une vérification par lecture du code et demandent un audit outillé sur l'application en fonctionnement : l'accessibilité au niveau AA du WCAG 2.1 (§16), les seuils de performance mesurés en conditions représentatives (§20.1) et le comportement en réseau dégradé (§19).
 
-Aucun chiffrage n'est proposé : il dépend entièrement des arbitrages de la section 1. Si le framework et l'absence de Keycloak sont actés en dérogation, le reste relève d'une mise à niveau d'outillage, de l'ordre de quelques jours. Si l'un des deux est refusé, le sujet change de nature.
+La charte backend a été confrontée au socle technique, à l'architecture, à la qualité et aux tests. Les sections sur l'observabilité, la configuration distribuée et le déploiement n'ont pas été détaillées faute d'objet : rien n'est en place sur ces sujets.
+
+Aucun chiffrage n'est proposé : il dépend entièrement des arbitrages de la section 1. Si le framework et l'absence de Keycloak sont actés en dérogation, l'essentiel du reste relève d'une mise à niveau d'outillage et de configuration, de l'ordre de quelques jours pour le frontend. Le backend est d'un autre ordre : passer de Spring Boot 4 servlet et JPA à 3.5.x réactif et R2DBC, en cinq modules hexagonaux, n'est pas une mise à niveau mais une refonte du socle.
+
+## 6. Synthèse
+
+| Domaine | Conformité |
+|---|---|
+| Frontend , structure, TypeScript de base, découpage du parcours | acquise |
+| Frontend , outillage qualité, nommage, design system, performance | à construire |
+| Frontend , stockage du PIN et du jeton | **défaut de sécurité, section 0** |
+| Frontend , framework et Keycloak | **arbitrage comité, section 1** |
+| Backend , versionnement des routes, Maven Wrapper | acquise |
+| Backend , socle technique et architecture | refonte |
+| Gestion des sources | à construire (branches, protection, contrôle des commits) |
