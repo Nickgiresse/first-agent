@@ -96,4 +96,15 @@ public class OnboardingSession {
   protected void onCreate() {
     this.createdAt = LocalDateTime.now();
   }
+
+  /**
+   * Qui agit dans cette session, pour le journal d'audit.
+   *
+   * <p>Le numéro de téléphone quand il est connu, l'identifiant de la session à défaut : une trace
+   * qui ne nomme personne reste exploitable, une trace absente ne l'est pas. Le repli est explicite
+   * plutôt que silencieux, pour qu'on puisse distinguer un acteur non identifié d'un champ vide.
+   */
+  public String identifiantActeur() {
+    return phoneNumber == null || phoneNumber.isBlank() ? "session:" + id : phoneNumber;
+  }
 }

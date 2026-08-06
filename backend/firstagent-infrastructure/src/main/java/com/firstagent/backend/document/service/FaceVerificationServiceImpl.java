@@ -1,5 +1,8 @@
 package com.firstagent.backend.document.service;
 
+import com.firstagent.backend.audit.model.EvenementAudit;
+import com.firstagent.backend.audit.model.TypeActeur;
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.exception.BusinessException;
@@ -25,6 +28,7 @@ public class FaceVerificationServiceImpl implements FaceVerificationService {
   private final StagingDocumentRepository stagingDocumentRepository;
   private final StagingFaceVerificationResultRepository stagingFaceVerificationResultRepository;
   private final OnboardingSessionService onboardingSessionService;
+  private final JournalAudit journal;
   private final StorageService storageService;
   private final FaceMatchProvider faceMatchProvider;
 
@@ -70,6 +74,19 @@ public class FaceVerificationServiceImpl implements FaceVerificationService {
         mapToResponse(stagingFaceVerificationResultRepository.save(result));
 
     if (!matchResult.matched()) {
+      // Un refus isolé est banal : mauvais éclairage, visage partiellement
+      // masqué. Leur répétition sur un même compte l'est moins, et c'est ce
+      // que les règles d'alerte cherchent.
+      journal.enregistrer(
+          JournalAudit.EcritureAudit.echec(
+              session.getPhoneNumber(),
+              EvenementAudit.FACIAL_REFUSE,
+              session.identifiantActeur(),
+              TypeActeur.CLIENT,
+              String.format(
+                  "Comparaison faciale sous le seuil (similarité %.3f, qualité du selfie %.3f)",
+                  matchResult.similarityScore(), matchResult.targetQualityScore())));
+
       throw new BusinessException(
           "Le visage sur le selfie ne correspond pas à la photo de la CNI. Reprenez la photo dans de meilleures conditions (visage bien visible, sans lunettes de soleil ni masque).");
     }

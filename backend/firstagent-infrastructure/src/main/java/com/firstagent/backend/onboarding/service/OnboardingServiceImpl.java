@@ -1,5 +1,8 @@
 package com.firstagent.backend.onboarding.service;
 
+import com.firstagent.backend.audit.model.EvenementAudit;
+import com.firstagent.backend.audit.model.TypeActeur;
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.CustomerStatus;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.enums.LivenessStatus;
@@ -77,6 +80,7 @@ public class OnboardingServiceImpl implements OnboardingService {
   @Value("${app.mail.from-address}")
   private String fromAddress;
 
+  private final JournalAudit journal;
   private final OnboardingSessionService onboardingSessionService;
   private final CustomerRepository customerRepository;
   private final PinService pinService;
@@ -134,8 +138,17 @@ public class OnboardingServiceImpl implements OnboardingService {
     sendOtpEmail(request.getEmail(), code);
   }
 
+  /**
+   * Vérifie le code reçu par courriel.
+   *
+   * <p>{@code noRollbackFor} n'est pas un détail de configuration ici, c'est ce qui fait exister la
+   * protection contre la force brute. {@link BusinessException} étant une exception non contrôlée,
+   * une transaction ordinaire l'annulerait entièrement, y compris l'incrément du compteur de
+   * tentatives écrit juste avant le rejet. Le compteur repartirait donc de zéro à chaque essai, le
+   * verrou ne serait jamais atteint, et le code à six chiffres pourrait être parcouru sans limite.
+   */
   @Override
-  @Transactional
+  @Transactional(noRollbackFor = BusinessException.class)
   public void verifyEmailOtp(String sessionToken, OtpVerificationRequest request) {
     OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
 
@@ -153,12 +166,38 @@ public class OnboardingServiceImpl implements OnboardingService {
     }
 
     if (session.getEmailOtpAttempts() >= OTP_MAX_ATTEMPTS) {
+      // Distinct du simple code erroné : atteindre le verrou est un signal plus
+      // fort, et les confondre empêcherait de les compter séparément.
+      journal.enregistrer(
+          JournalAudit.EcritureAudit.echec(
+              session.getPhoneNumber(),
+              EvenementAudit.OTP_VERROUILLE,
+              session.identifiantActeur(),
+              TypeActeur.CLIENT,
+              "Vérification par code verrouillée après " + OTP_MAX_ATTEMPTS + " tentatives"));
+
       throw new BusinessException("Trop de tentatives incorrectes. Demandez un nouveau code.");
     }
 
     if (!passwordEncoder.matches(request.getCode(), session.getEmailOtpCodeHash())) {
       session.setEmailOtpAttempts(session.getEmailOtpAttempts() + 1);
       onboardingSessionRepository.save(session);
+
+      // Le rang de la tentative, jamais le code saisi : journaliser les codes
+      // essayés révélerait par recoupement l'espace parcouru, et finirait par
+      // livrer le bon à qui lit le journal.
+      journal.enregistrer(
+          JournalAudit.EcritureAudit.echec(
+              session.getPhoneNumber(),
+              EvenementAudit.OTP_ERRONE,
+              session.identifiantActeur(),
+              TypeActeur.CLIENT,
+              "Code de vérification erroné (tentative "
+                  + session.getEmailOtpAttempts()
+                  + " sur "
+                  + OTP_MAX_ATTEMPTS
+                  + ")"));
+
       throw new BusinessException("Code de vérification incorrect");
     }
 

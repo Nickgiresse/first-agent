@@ -268,12 +268,8 @@ public class OcrServiceImpl implements OcrService {
           JournalAudit.EcritureAudit.echec(
               session.getPhoneNumber(),
               EvenementAudit.CONTROLE_KYC,
-              // L'acteur est le client, seul intervenant à ce stade du parcours.
-              // La valeur de repli garde l'entrée exploitable même si le numéro
-              // manque : une trace anonyme vaut mieux qu'une trace absente.
-              session.getPhoneNumber() == null || session.getPhoneNumber().isBlank()
-                  ? "session:" + session.getId()
-                  : session.getPhoneNumber(),
+              // Le client est le seul intervenant à ce stade du parcours.
+              session.identifiantActeur(),
               TypeActeur.CLIENT,
               // Les similarités, pas les noms : le journal dit qu'un contrôle a
               // échoué et à quel point, sans recopier l'identité en clair.
