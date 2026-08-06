@@ -75,6 +75,16 @@ def extract_document_fields(
     average_confidence = sum(w.confidence for w in all_words) / len(all_words) if all_words else 0.0
 
     fields, kind_specific_issues = _parse_by_kind(document_kind, combined_text)
+
+    # Croisement avec le service ocr-cni du WhatsApp banking : éprouvé sur les
+    # CNI camerounaises réelles (RapidOCR + modèle latin + MRZ + recadrage),
+    # ses lectures priment quand il répond. Best-effort, jamais bloquant.
+    notes_cni = _enrichir_via_ocr_cni(front_bytes, back_bytes, fields, document_kind)
+    if notes_cni and document_kind == DocumentKind.UNKNOWN and (
+            fields.documentNumber or (fields.lastName and fields.firstName)):
+        document_kind = DocumentKind.CNI
+        fields.documentKind = DocumentKind.CNI.value
+
     issues = quality_issues + kind_specific_issues + _collect_issues(document_kind, fields, average_confidence, settings)
 
     return DocumentExtractResponse(
@@ -227,3 +237,63 @@ def _collect_issues(
         issues.append(f"Confiance OCR faible ({round(average_confidence)}%) : reprenez des photos plus nettes")
 
     return issues
+
+
+def _enrichir_via_ocr_cni(front_bytes: bytes, back_bytes: bytes | None,
+                          fields: ExtractedFields, document_kind) -> list[str]:
+    """Croise l'extraction locale avec le service ocr-cni du WhatsApp banking.
+
+    Quand OCR_CNI_URL est configurée, chaque face est soumise au service et
+    les champs qu'il lit remplacent la lecture locale (noms, dates, numéro de
+    pièce) : il est validé sur pièces réelles là où le moteur local reste
+    généraliste. Sans configuration ou service injoignable, l'extraction
+    locale demeure seule juge — aucun échec ne remonte au client.
+    """
+    import os
+    base = (os.getenv("OCR_CNI_URL") or "").strip().rstrip("/")
+    if not base:
+        return []
+    cle = (os.getenv("OCR_CNI_API_KEY") or os.getenv("FACE_VERIFY_API_KEY") or "").strip()
+
+    import httpx
+    fusion: dict = {}
+    try:
+        with httpx.Client(timeout=90) as client:
+            for nom, data in (("recto", front_bytes), ("verso", back_bytes)):
+                if not data:
+                    continue
+                reponse = client.post(
+                    f"{base}/api/extract",
+                    headers={"X-API-Key": cle} if cle else {},
+                    files={"document": (f"{nom}.jpg", data, "image/jpeg")},
+                    data={"document_type": "CNI"},
+                )
+                if reponse.status_code != 200:
+                    continue
+                for k, v in (reponse.json().get("fields") or {}).items():
+                    if v:
+                        fusion.setdefault(k, v)
+    except Exception:
+        return []
+    if not fusion:
+        return []
+
+    from datetime import date as _date
+
+    def _en_date(valeur):
+        try:
+            return _date.fromisoformat(str(valeur))
+        except (TypeError, ValueError):
+            return None
+
+    if fusion.get("last_name"):
+        fields.lastName = fusion["last_name"]
+    if fusion.get("first_name"):
+        fields.firstName = fusion["first_name"]
+    if _en_date(fusion.get("birth_date")):
+        fields.birthDate = _en_date(fusion["birth_date"])
+    if fusion.get("birth_place"):
+        fields.birthPlace = fusion["birth_place"]
+    if fusion.get("identity_document_number"):
+        fields.documentNumber = fusion["identity_document_number"]
+    return ["Champs croisés avec le service OCR du WhatsApp banking"]
