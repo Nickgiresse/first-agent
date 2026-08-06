@@ -221,7 +221,16 @@ rendait la falsification détectable sans la rendre impossible.
 **Alertes comportementales** balayant ce journal : échecs KYC répétés,
 codes erronés, échecs de vivacité. Trois règles là où la source en a cinq,
 les deux écartées observant un flux de messages et un moteur conversationnel
-que ce service n'a pas.
+que ce service n'a pas. Les cinq points sensibles du parcours sont
+instrumentés, sans qu'aucune donnée personnelle n'entre dans les traces :
+scores de similarité et rangs de tentative, jamais les identités ni les codes
+saisis.
+
+**Verrou anti-force-brute de l'OTP réparé.** Défaut préalable trouvé en
+instrumentant : le compteur de tentatives était incrémenté puis annulé avec
+la transaction au moment du rejet, si bien qu'il repartait de zéro à chaque
+essai. La limite de cinq tentatives n'était jamais atteinte et les six
+chiffres du code pouvaient être parcourus sans limite.
 
 ### Reste à faire, par ordre de dépendance
 
@@ -229,7 +238,7 @@ que ce service n'a pas.
    Les cinq modules existent et la règle de pureté est tenue, mais le code
    attend encore dans `infrastructure`. C'est la partie longue.
 2. **Relèvement du plancher de couverture** vers les 80 % de la charte §11,
-   par paliers. Mesure au 06/08/2026 : 39,6 %, cliquet à 35 %.
+   par paliers. Mesure au 06/08/2026 : 41,9 % agrégés, cliquet à 35 %. Le contrôle porte module par module, donc le plancher ne peut dépasser le moins couvert : boot, à 37,5 %, qui ne contient que le point d’entrée. Les modules portant du code réel sont plus haut (commons 97,8 %, domain 46,8 %, infrastructure 40,8 %).
 3. **SonarQube**, une fois un serveur disponible.
 4. **Outillage frontend** : dépôt Nexus, ESLint, crochet de pré-commit,
    préfixe `afb-`, jetons de couleur, polices locales, `OnPush`.
