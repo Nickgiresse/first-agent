@@ -9,6 +9,7 @@ import com.firstagent.backend.pin.dto.PinResetConfirmRequest;
 import com.firstagent.backend.pin.dto.PinResetRequest;
 import com.firstagent.backend.pin.dto.PinResetResponse;
 import com.firstagent.backend.pin.entity.PinResetToken;
+import com.firstagent.backend.pin.port.PinService;
 import com.firstagent.backend.pin.repository.PinResetTokenRepository;
 import java.time.LocalDateTime;
 import java.util.UUID;

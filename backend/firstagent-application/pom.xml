@@ -13,8 +13,10 @@
 	<name>firstagent-application</name>
 	<description>Cas d'usage et ports. Spring reduit a l'injection de dependances.</description>
 
-	<!-- Encore vide : le code correspondant attend dans infrastructure et sera
-	     extrait aux passes suivantes du découpage (voir le POM parent). -->
+	<!-- Première extraction faite : les ports, c'est-à-dire les interfaces par
+	     lesquelles le métier énonce ce dont il a besoin, sans dire qui le lui
+	     fournira. Les cas d'usage attendent encore dans infrastructure, où ils
+	     sont mêlés à la persistance (voir le POM parent). -->
 
 	<dependencies>
 		<dependency>
@@ -22,5 +24,55 @@
 			<artifactId>firstagent-commons</artifactId>
 		</dependency>
 	</dependencies>
+
+	<!--
+	  Les ports sont la frontière : ils décrivent un besoin métier, pas un
+	  moyen technique. Un port qui importerait `MultipartFile`, `Mono` ou une
+	  annotation JPA aurait déjà choisi son implémentation, et la couche
+	  n'inverserait plus rien.
+
+	  JPA et Hibernate sont bannis ici comme dans domain. Spring ne l'est pas :
+	  la charte §3 tolère l'injection de dépendances à ce niveau. La tolérance
+	  s'arrête là, et c'est une limite que l'outil ne sait pas vérifier ; elle
+	  reste à la revue.
+	-->
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>etancheite-des-ports</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<bannedDependencies>
+									<excludes>
+										<exclude>jakarta.persistence:*</exclude>
+										<exclude>org.hibernate:*</exclude>
+										<exclude>org.hibernate.orm:*</exclude>
+										<exclude>org.springframework:spring-web</exclude>
+										<exclude>org.springframework:spring-webmvc</exclude>
+										<exclude>org.springframework.boot:spring-boot-starter-web</exclude>
+										<exclude>org.springframework.boot:spring-boot-starter-webflux</exclude>
+										<exclude>org.springframework.boot:spring-boot-starter-data-jpa</exclude>
+									</excludes>
+									<message>
+										Le module application décrit des cas d'usage et des ports : il ne
+										doit connaître ni la persistance ni le transport (charte backend §3).
+										La dépendance ci-dessus appartient à infrastructure.
+									</message>
+								</bannedDependencies>
+							</rules>
+							<fail>true</fail>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 </project>

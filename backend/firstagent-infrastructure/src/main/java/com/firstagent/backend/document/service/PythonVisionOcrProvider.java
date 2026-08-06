@@ -1,5 +1,7 @@
 package com.firstagent.backend.document.service;
 
+import com.firstagent.backend.document.model.OcrExtractionResult;
+import com.firstagent.backend.document.port.OcrProvider;
 import com.firstagent.backend.vision.client.PythonVisionClient;
 import com.firstagent.backend.vision.dto.DocumentAnalyzeResult;
 import com.firstagent.backend.vision.dto.DocumentExtractResult;

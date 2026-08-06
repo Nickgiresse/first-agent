@@ -1,4 +1,4 @@
-package com.firstagent.backend.pin.service;
+package com.firstagent.backend.pin.port;
 
 public interface PinService {
   String hashPin(String rawPin);

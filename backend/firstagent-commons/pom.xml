@@ -13,13 +13,26 @@
 	<name>firstagent-commons</name>
 	<description>Briques techniques transverses : enveloppe web, ProblemDetail, entite de base.</description>
 
-	<!-- Encore vide : le code correspondant attend dans infrastructure et sera
-	     extrait aux passes suivantes du découpage (voir le POM parent). -->
+	<!-- Première extraction faite : les utilitaires techniques sans dépendance
+	     de cadre. L'enveloppe web et le ProblemDetail attendent encore dans
+	     infrastructure, faute de pouvoir en être séparés sans toucher au
+	     transport (voir le POM parent). -->
 
 	<dependencies>
 		<dependency>
 			<groupId>com.firstagent</groupId>
 			<artifactId>firstagent-domain</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 

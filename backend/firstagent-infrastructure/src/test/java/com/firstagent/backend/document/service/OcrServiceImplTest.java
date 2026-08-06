@@ -17,6 +17,8 @@ import com.firstagent.backend.document.dto.OcrConfirmationRequest;
 import com.firstagent.backend.document.dto.OcrExtractionResponse;
 import com.firstagent.backend.document.entity.StagingDocument;
 import com.firstagent.backend.document.entity.StagingOcrResult;
+import com.firstagent.backend.document.model.OcrExtractionResult;
+import com.firstagent.backend.document.port.OcrProvider;
 import com.firstagent.backend.document.repository.StagingDocumentRepository;
 import com.firstagent.backend.document.repository.StagingOcrResultRepository;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;

@@ -7,6 +7,8 @@ import com.firstagent.backend.common.exception.ResourceNotFoundException;
 import com.firstagent.backend.document.dto.FaceVerificationResponse;
 import com.firstagent.backend.document.entity.StagingDocument;
 import com.firstagent.backend.document.entity.StagingFaceVerificationResult;
+import com.firstagent.backend.document.model.FaceMatchResult;
+import com.firstagent.backend.document.port.FaceMatchProvider;
 import com.firstagent.backend.document.repository.StagingDocumentRepository;
 import com.firstagent.backend.document.repository.StagingFaceVerificationResultRepository;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;

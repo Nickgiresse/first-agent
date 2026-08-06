@@ -1,5 +1,6 @@
 package com.firstagent.backend.pin.service;
 
+import com.firstagent.backend.pin.port.PinService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

@@ -44,7 +44,7 @@ import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
 import com.firstagent.backend.onboarding.repository.CustomerRepository;
 import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
-import com.firstagent.backend.pin.service.PinService;
+import com.firstagent.backend.pin.port.PinService;
 import com.firstagent.backend.whatsappbanking.client.WhatsAppBankingClient;
 import java.time.LocalDateTime;
 import java.util.List;

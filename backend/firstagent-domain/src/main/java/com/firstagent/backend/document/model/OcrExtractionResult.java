@@ -1,4 +1,4 @@
-package com.firstagent.backend.document.service;
+package com.firstagent.backend.document.model;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -1,5 +1,7 @@
 package com.firstagent.backend.document.service;
 
+import com.firstagent.backend.document.model.FaceMatchResult;
+import com.firstagent.backend.document.port.FaceMatchProvider;
 import com.firstagent.backend.vision.client.PythonVisionClient;
 import com.firstagent.backend.vision.dto.FaceAnalyzeResult;
 import com.firstagent.backend.vision.dto.FaceCompareResult;
