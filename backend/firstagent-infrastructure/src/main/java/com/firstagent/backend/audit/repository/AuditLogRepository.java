@@ -85,12 +85,24 @@ public interface AuditLogRepository extends JpaRepository<AuditLogEntry, UUID> {
   boolean existsByEventTypeAndReferenceAndTimestampGreaterThanEqual(
       String eventType, String reference, Instant depuis);
 
-  /** Parcours chronologique borné dans le temps, pour l'export vers un SIEM. */
+  /**
+   * Parcours chronologique borné dans le temps, pour l'export vers un SIEM.
+   *
+   * <p>Deux méthodes plutôt qu'un {@code :depuis IS NULL OR ...} qui les réunirait. La forme
+   * unifiée compile et se parse sans rien signaler, mais échoue à l'exécution sur PostgreSQL :
+   * confronté à un paramètre utilisé seul dans un test de nullité, le moteur ne sait pas en déduire
+   * le type et refuse la requête. Le défaut ne se manifeste donc qu'à l'appel, et seulement quand
+   * la borne est absente.
+   */
   @Query(
       """
       SELECT e FROM AuditLogEntry e
-      WHERE (:depuis IS NULL OR e.timestamp >= :depuis)
+      WHERE e.timestamp >= :depuis
       ORDER BY e.timestamp ASC, e.id ASC
       """)
   List<AuditLogEntry> depuis(@Param("depuis") Instant depuis, Limit taille);
+
+  /** Parcours chronologique complet, quand aucune borne de début n'est donnée. */
+  @Query("SELECT e FROM AuditLogEntry e ORDER BY e.timestamp ASC, e.id ASC")
+  List<AuditLogEntry> tout(Limit taille);
 }

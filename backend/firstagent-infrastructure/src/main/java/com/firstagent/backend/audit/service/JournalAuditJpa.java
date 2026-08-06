@@ -209,7 +209,9 @@ public class JournalAuditJpa implements JournalAudit {
   @Transactional(readOnly = true)
   public Stream<String> exporterJsonl(Instant depuis, Long limite) {
     int taille = limite == null ? Integer.MAX_VALUE : (int) Math.min(Integer.MAX_VALUE, limite);
-    return depot.depuis(depuis, Limit.of(taille)).stream().map(this::versJsonl);
+    Limit borne = Limit.of(taille);
+    List<AuditLogEntry> entrees = depuis == null ? depot.tout(borne) : depot.depuis(depuis, borne);
+    return entrees.stream().map(this::versJsonl);
   }
 
   /**
