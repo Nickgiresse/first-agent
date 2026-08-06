@@ -2,6 +2,7 @@ import { Location } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AccountService } from '../../../core/services/account';
+import { LanguageService } from '../../../core/services/language';
 import { OnboardingState } from '../../../core/services/onboarding-state';
 import { AccountNumberInput } from '../../../shared/components/account-number-input/account-number-input';
 

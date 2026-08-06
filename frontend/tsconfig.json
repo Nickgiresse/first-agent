@@ -3,17 +3,34 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    /* Socle minimal imposé par la charte frontend §6.1. `strict` implique
+       déjà noImplicitAny et strictNullChecks : la charte les veut néanmoins
+       explicites, une relecture ne devant pas avoir à déduire ce qui est
+       actif. */
     "strict": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
     "skipLibCheck": true,
     "isolatedModules": true,
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    /* Alias de chemins (§4.1) : les imports passent par eux plutôt que par
+       des chaînes de remontée relatives. */
+    "baseUrl": "./src",
+    "paths": {
+      "@core/*": ["app/core/*"],
+      "@shared/*": ["app/shared/*"],
+      "@features/*": ["app/features/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
