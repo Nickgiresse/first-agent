@@ -210,13 +210,26 @@ nommage. Manque SonarQube, qui suppose un serveur.
 **Migrations destructrices.** `V17` répare les identités écrasées par les
 `UPDATE` sans clause `WHERE` de `V3`, `V10` et `V13`.
 
+**Journal forensique scellé** (`V18`), porté depuis le bot WhatsApp. Chaque
+entrée porte un acteur explicite, et est scellée par un HMAC-SHA256 couvrant
+son contenu et l'empreinte de la précédente : supprimer, insérer, modifier ou
+réordonner rompt la chaîne, que la vérification sait localiser. Deux
+déclencheurs en base doublent la garantie en refusant toute suppression et
+toute modification autre que la pose de l'empreinte, là où le chaînage seul
+rendait la falsification détectable sans la rendre impossible.
+
+**Alertes comportementales** balayant ce journal : échecs KYC répétés,
+codes erronés, échecs de vivacité. Trois règles là où la source en a cinq,
+les deux écartées observant un flux de messages et un moteur conversationnel
+que ce service n'a pas.
+
 ### Reste à faire, par ordre de dépendance
 
 1. **Extraction du contenu métier** vers `domain`, `application` et `commons`.
    Les cinq modules existent et la règle de pureté est tenue, mais le code
    attend encore dans `infrastructure`. C'est la partie longue.
-2. **Relèvement du plancher de couverture** de 30 % vers les 80 % de la
-   charte §11, par paliers. Le laisser à 30 % reviendrait à s'en accommoder.
+2. **Relèvement du plancher de couverture** vers les 80 % de la charte §11,
+   par paliers. Mesure au 06/08/2026 : 39,6 %, cliquet à 35 %.
 3. **SonarQube**, une fois un serveur disponible.
 4. **Outillage frontend** : dépôt Nexus, ESLint, crochet de pré-commit,
    préfixe `afb-`, jetons de couleur, polices locales, `OnPush`.
