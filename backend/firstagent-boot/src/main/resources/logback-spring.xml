@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Journalisation applicative.
+
+  Les traces techniques quittent le périmètre de la base : elles partent
+  vers un agrégateur, sont lues par des exploitants, conservées longtemps
+  et sauvegardées ailleurs. Un numéro de téléphone ou un RIB qui s'y
+  trouve échappe à toutes les protections mises autour des données
+  elles-mêmes, et il y reste.
+
+  Le masquage est donc appliqué par le formateur, au dernier moment avant
+  l'écriture, et non à chaque appel. Compter sur chaque log.info() pour
+  masquer ce qu'il affiche supposerait que personne n'oublie jamais, sur
+  toute la durée de vie du projet. Ici, tout ce qui sort est traité, y
+  compris les traces des bibliothèques tierces sur lesquelles personne
+  n'a la main.
+
+  Le journal d'audit, lui, porte volontairement ces données et les
+  protège par son propre scellement : il ne passe pas par ici.
+-->
+<configuration>
+
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!--
+      %msgMasque remplace %msg partout. Le nom est délibérément différent
+      pour qu'un motif copié d'ailleurs, qui utiliserait %msg, se remarque
+      à la relecture au lieu de désactiver le masquage en silence.
+
+      ATTENTION AU NOM DE CLASSE CI-DESSOUS. C'est une chaîne : ni le
+      compilateur ni Logback ne la vérifient. Si elle devient périmée, par
+      un renommage de paquet ou de classe, Logback ne se contente pas de
+      ne plus masquer : il remplace le message par %PARSER_ERROR et la
+      trace est PERDUE. Tous les journaux deviennent muets sans qu'aucune
+      erreur ne le signale.
+
+      ConfigurationJournalisationTest relie cette chaîne à la classe
+      réelle, pour qu'un renommage casse un test plutôt que la
+      journalisation en production.
+    -->
+    <conversionRule conversionWord="msgMasque"
+                    converterClass="com.firstagent.backend.common.log.ConvertisseurMasque"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %-40.40logger{39} : %msgMasque%n%wEx</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
