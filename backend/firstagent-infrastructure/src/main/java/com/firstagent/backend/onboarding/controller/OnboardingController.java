@@ -1,12 +1,23 @@
 package com.firstagent.backend.onboarding.controller;
 
 import com.firstagent.backend.common.dto.ApiResponse;
-import com.firstagent.backend.onboarding.dto.*;
+import com.firstagent.backend.onboarding.dto.CompleteOnboardingRequest;
+import com.firstagent.backend.onboarding.dto.KycRequest;
+import com.firstagent.backend.onboarding.dto.LinkVerificationResponse;
+import com.firstagent.backend.onboarding.dto.LinkVerifyRequest;
+import com.firstagent.backend.onboarding.dto.OnboardingCompletionResponse;
+import com.firstagent.backend.onboarding.dto.OtpVerificationRequest;
+import com.firstagent.backend.onboarding.dto.ProfileCreationRequest;
+import com.firstagent.backend.onboarding.dto.TermsAcceptanceRequest;
 import com.firstagent.backend.onboarding.service.OnboardingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/onboarding")

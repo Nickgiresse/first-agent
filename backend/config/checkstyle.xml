@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  Règles Checkstyle du projet (charte backend §10).
+
+  Ce fichier n'est PAS google_checks.xml. Spotless applique déjà
+  google-java-format à chaque compilation : reprendre ici les règles de mise
+  en forme reviendrait à faire vérifier par un second outil ce que le premier
+  garantit déjà, et noierait les vrais signalements sous des centaines de
+  remarques d'indentation.
+
+  Ne restent donc que les règles que le formatage ne peut pas voir :
+  nommage, taille et complexité, et quelques pièges de correction.
+
+  Deux niveaux de gravité :
+    - error   : défaut de correction ou violation d'une convention nommée
+                par la charte. Bloquant.
+    - warning : signal de conception à traiter, sans bloquer aujourd'hui.
+-->
+<module name="Checker">
+  <property name="severity" value="error"/>
+  <property name="fileExtensions" value="java"/>
+
+  <!-- Les fichiers sources sont en UTF-8 (charte §4). -->
+  <module name="NewlineAtEndOfFile"/>
+  <module name="FileTabCharacter"/>
+
+  <!-- Exemptions motivées une à une dans le fichier référencé. -->
+  <module name="SuppressionFilter">
+    <property name="file" value="${suppressions}"/>
+  </module>
+
+  <module name="TreeWalker">
+
+    <!--
+      NOMMAGE (charte §5). Ces règles n'ont pas d'équivalent dans le
+      formatage : google-java-format aligne le code, il ne renomme rien.
+    -->
+    <module name="PackageName">
+      <property name="format" value="^com\.firstagent(\.[a-z][a-z0-9]*)*$"/>
+    </module>
+    <module name="TypeName"/>
+    <module name="MethodName"/>
+    <module name="LocalVariableName"/>
+    <module name="ParameterName"/>
+    <module name="MemberName"/>
+    <module name="ConstantName"/>
+
+    <!--
+      CORRECTION. Chacune de ces règles désigne un défaut réel, pas un
+      désaccord de style.
+    -->
+    <!-- Un equals() sans hashCode() casse les collections de hachage. -->
+    <module name="EqualsHashCode"/>
+    <!-- « chaine.equals(CONSTANTE) » lève un NPE là où l'inverse ne le fait pas. -->
+    <module name="EqualsAvoidNull"/>
+    <!-- Un « if » sans accolades a déjà coûté cher à d'autres (goto fail). -->
+    <module name="NeedBraces"/>
+    <!-- Une chute d'un cas de switch dans le suivant est presque toujours un oubli. -->
+    <module name="FallThrough"/>
+    <!-- Réaffecter un paramètre rend la valeur reçue introuvable à la lecture. -->
+    <module name="ParameterAssignment"/>
+    <!-- Un champ masqué par une variable locale se lit pour ce qu'il n'est pas. -->
+    <module name="InnerAssignment"/>
+    <!-- Attraper Throwable avale aussi les erreurs de la JVM. -->
+    <module name="IllegalCatch">
+      <property name="illegalClassNames" value="java.lang.Throwable, java.lang.Error"/>
+    </module>
+    <!-- Une exception vide fait disparaître la panne sans trace. -->
+    <module name="EmptyCatchBlock">
+      <property name="exceptionVariableName" value="ignore|attendu"/>
+    </module>
+    <!-- Un import * masque d'où vient un type et casse à la moindre collision. -->
+    <module name="AvoidStarImport"/>
+    <module name="UnusedImports"/>
+    <!-- Un « return » multiple dans une expression booléenne se simplifie toujours. -->
+    <module name="SimplifyBooleanExpression"/>
+    <module name="SimplifyBooleanReturn"/>
+    <!-- Comparer des flottants par == ne donne pas ce qu'on croit. -->
+    <module name="DescendantToken">
+      <property name="tokens" value="LITERAL_ASSERT"/>
+      <property name="limitedTokens" value="ASSIGN"/>
+      <property name="maximumNumber" value="0"/>
+    </module>
+
+    <!--
+      CONCEPTION. Signalées sans bloquer : le code existant n'a pas encore
+      été repris, et faire échouer le build aujourd'hui arrêterait tout le
+      reste. À passer en `error` une fois le parc résorbé, comme pour
+      SpotBugs.
+    -->
+    <module name="MethodLength">
+      <property name="max" value="80"/>
+      <property name="countEmpty" value="false"/>
+      <property name="severity" value="warning"/>
+    </module>
+    <module name="ParameterNumber">
+      <property name="max" value="8"/>
+      <property name="severity" value="warning"/>
+    </module>
+    <module name="CyclomaticComplexity">
+      <property name="max" value="15"/>
+      <property name="severity" value="warning"/>
+    </module>
+    <!-- Un champ public non final laisse l'état d'un objet modifiable de partout. -->
+    <module name="VisibilityModifier">
+      <property name="protectedAllowed" value="true"/>
+      <property name="severity" value="warning"/>
+    </module>
+
+  </module>
+</module>

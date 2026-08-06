@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Exemptions Checkstyle, motivées une à une.
+
+  Une exemption sans motif se transforme vite en trou de règle que plus
+  personne ne sait justifier. Chaque entrée dit donc pourquoi la règle ne
+  s'applique pas là, et non pourquoi il serait pénible de s'y conformer.
+-->
+<suppressions>
+
+  <!--
+    Nommage des méthodes de dépôt Spring Data.
+
+    Les noms tels que `findByCustomer_Id` contiennent un tiret bas, ce que la
+    convention Java proscrit. Mais ce tiret bas n'est pas une négligence de
+    style : c'est la syntaxe par laquelle Spring Data distingue le parcours
+    d'une propriété imbriquée (`customer.id`) d'un champ qui s'appellerait
+    littéralement `customerId`. Sans lui, la dérivation de requête change de
+    cible ou échoue au démarrage du contexte.
+
+    La règle et le cadre se contredisent ici ; c'est le cadre qui commande,
+    puisque le nom de la méthode EST la requête. L'exemption est donc bornée
+    aux seules interfaces de dépôt.
+  -->
+  <suppress checks="MethodName" files="[\\/]repository[\\/].*Repository\.java$"/>
+
+  <!--
+    Nommage des méthodes de test.
+
+    Un test se nomme `methode_situation_resultatAttendu`, en trois segments
+    séparés par des tirets bas. Ce n'est pas un relâchement de la convention
+    Java mais son remplacement délibéré : le nom d'un test n'est appelé par
+    personne, il est lu dans un rapport d'échec. « store_sousDossierPiege_
+    estAssaini » dit ce qui a cassé sans qu'on ouvre le fichier, là où
+    « storeSousDossierPiegeEstAssaini » oblige à redécouper la phrase.
+
+    Bornée aux classes de test ; le code de production reste soumis à la
+    règle.
+  -->
+  <suppress checks="MethodName" files=".*Test\.java$"/>
+
+</suppressions>

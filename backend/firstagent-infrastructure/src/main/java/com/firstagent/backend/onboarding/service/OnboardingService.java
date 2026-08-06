@@ -1,6 +1,12 @@
 package com.firstagent.backend.onboarding.service;
 
-import com.firstagent.backend.onboarding.dto.*;
+import com.firstagent.backend.onboarding.dto.CompleteOnboardingRequest;
+import com.firstagent.backend.onboarding.dto.KycRequest;
+import com.firstagent.backend.onboarding.dto.LinkVerificationResponse;
+import com.firstagent.backend.onboarding.dto.OnboardingCompletionResponse;
+import com.firstagent.backend.onboarding.dto.OtpVerificationRequest;
+import com.firstagent.backend.onboarding.dto.PinCreationRequest;
+import com.firstagent.backend.onboarding.dto.TermsAcceptanceRequest;
 
 public interface OnboardingService {
 

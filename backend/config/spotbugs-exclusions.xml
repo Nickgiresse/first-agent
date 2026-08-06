@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Exclusions SpotBugs, à garder exceptionnelles et toujours justifiées
+  (charte backend §10). Chaque entrée dit POURQUOI le signalement ne
+  correspond pas à un défaut réel, et ce qui le démontre.
+
+  Une exclusion non motivée est pire qu'un avertissement : elle masque
+  durablement ce que l'outil a vu.
+-->
+<FindBugsFilter>
+
+  <!--
+    PATH_TRAVERSAL_IN sur LocalStorageServiceImpl.
+
+    L'analyse statique voit un Paths.get() alimenté par une donnée d'origine
+    externe et s'arrête là : elle ne suit pas la validation qui intervient
+    ensuite. Le confinement est pourtant effectif, et vérifié par des tests
+    dédiés (LocalStorageServiceImplTest) :
+
+      - le nom fourni par le client ne compose jamais le chemin ; le fichier
+        reçoit un identifiant tiré au sort ;
+      - l'extension est retenue sur liste blanche, ce qui écarte les
+        « extensions » contenant des séparateurs ;
+      - le sous-dossier est assaini ;
+      - tout chemin résolu hors du répertoire de dépôt est refusé, après
+        normalisation, à l'écriture comme à la lecture et à la suppression.
+
+    Le défaut d'origine était réel : l'ancienne implémentation reprenait tout
+    ce qui suivait le dernier point du nom fourni, si bien qu'un nom tel que
+    « photo.jpg/../../../ailleurs » écrivait hors du dossier. Il est corrigé ;
+    seul le signalement subsiste.
+  -->
+  <Match>
+    <Class name="com.firstagent.backend.document.service.LocalStorageServiceImpl"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
+
+</FindBugsFilter>

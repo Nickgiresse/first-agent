@@ -198,6 +198,94 @@
 			</plugin>
 
 			<!--
+			  Détection de bugs et de failles (charte §10). FindSecBugs ajoute
+			  à SpotBugs les motifs propres à la sécurité : injections,
+			  aléatoire prévisible, secrets en dur, désérialisation.
+			  Rapport : firstagent-*/target/spotbugsXml.xml
+			-->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<version>4.9.8.0</version>
+				<configuration>
+					<effort>Max</effort>
+					<threshold>Medium</threshold>
+					<!--
+					  Exclusions motivées une à une dans le fichier. Le chemin
+					  part de la racine du réacteur : un chemin relatif serait
+					  résolu depuis chaque module et ne serait trouvé nulle part.
+					-->
+					<excludeFilterFile>${maven.multiModuleProjectDirectory}/config/spotbugs-exclusions.xml</excludeFilterFile>
+					<!--
+					  Non bloquant pour l'instant : le parc de défauts existant
+					  n'a pas été traité, et faire échouer le build dès
+					  aujourd'hui empêcherait toute autre correction
+					  d'avancer. À passer à `true` une fois les signalements
+					  résorbés, comme l'exige la charte.
+					-->
+					<failOnError>false</failOnError>
+					<plugins>
+						<plugin>
+							<groupId>com.h3xstream.findsecbugs</groupId>
+							<artifactId>findsecbugs-plugin</artifactId>
+							<version>1.14.0</version>
+						</plugin>
+					</plugins>
+				</configuration>
+				<executions>
+					<execution>
+						<id>analyse-securite</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>spotbugs</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--
+			  Contrôle des conventions (charte §10). Le jeu de règles est
+			  volontairement restreint à ce que le formatage ne voit pas :
+			  nommage, complexité, pièges de correction. Détail et motifs
+			  dans config/checkstyle.xml.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.6.0</version>
+				<dependencies>
+					<!--
+					  Le moteur est plus récent que celui embarqué par défaut
+					  dans le plugin : les versions livrées avec le plugin
+					  ignorent une partie de la syntaxe de Java 21.
+					-->
+					<dependency>
+						<groupId>com.puppycrawl.tools</groupId>
+						<artifactId>checkstyle</artifactId>
+						<version>10.21.0</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle.xml</configLocation>
+					<propertyExpansion>suppressions=${maven.multiModuleProjectDirectory}/config/checkstyle-suppressions.xml</propertyExpansion>
+					<consoleOutput>true</consoleOutput>
+					<includeTestSourceDirectory>true</includeTestSourceDirectory>
+					<!-- Seules les règles en `error` arrêtent le build ; les `warning` sont affichées. -->
+					<violationSeverity>error</violationSeverity>
+					<failOnViolation>true</failOnViolation>
+				</configuration>
+				<executions>
+					<execution>
+						<id>controle-conventions</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--
 			  Verrouillage des versions de Java et de Maven (charte §2). Sans
 			  lui, un poste avec un autre JDK produit un artefact différent
 			  sans que rien ne le signale.
