@@ -14,26 +14,27 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class OcrController {
 
-    private final OcrService ocrService;
+  private final OcrService ocrService;
 
-    @PostMapping("/ocr/extract")
-    public ResponseEntity<ApiResponse<OcrExtractionResponse>> extract(@RequestHeader("X-Session-Token") String sessionToken) {
-        OcrExtractionResponse response = ocrService.extractDocumentData(sessionToken);
-        return ResponseEntity.ok(ApiResponse.success(response, "Extraction OCR réalisée avec succès"));
-    }
+  @PostMapping("/ocr/extract")
+  public ResponseEntity<ApiResponse<OcrExtractionResponse>> extract(
+      @RequestHeader("X-Session-Token") String sessionToken) {
+    OcrExtractionResponse response = ocrService.extractDocumentData(sessionToken);
+    return ResponseEntity.ok(ApiResponse.success(response, "Extraction OCR réalisée avec succès"));
+  }
 
-    @GetMapping("/ocr")
-    public ResponseEntity<ApiResponse<OcrExtractionResponse>> get(@RequestHeader("X-Session-Token") String sessionToken) {
-        OcrExtractionResponse response = ocrService.getExtractedData(sessionToken);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+  @GetMapping("/ocr")
+  public ResponseEntity<ApiResponse<OcrExtractionResponse>> get(
+      @RequestHeader("X-Session-Token") String sessionToken) {
+    OcrExtractionResponse response = ocrService.getExtractedData(sessionToken);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
 
-    @PutMapping("/ocr")
-    public ResponseEntity<ApiResponse<OcrExtractionResponse>> confirm(
-        @RequestHeader("X-Session-Token") String sessionToken,
-        @Valid @RequestBody OcrConfirmationRequest request
-    ) {
-        OcrExtractionResponse response = ocrService.confirmExtractedData(sessionToken, request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Données OCR confirmées avec succès"));
-    }
+  @PutMapping("/ocr")
+  public ResponseEntity<ApiResponse<OcrExtractionResponse>> confirm(
+      @RequestHeader("X-Session-Token") String sessionToken,
+      @Valid @RequestBody OcrConfirmationRequest request) {
+    OcrExtractionResponse response = ocrService.confirmExtractedData(sessionToken, request);
+    return ResponseEntity.ok(ApiResponse.success(response, "Données OCR confirmées avec succès"));
+  }
 }

@@ -14,21 +14,22 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PythonVisionFaceMatchProvider implements FaceMatchProvider {
 
-    private final PythonVisionClient visionClient;
+  private final PythonVisionClient visionClient;
 
-    @Override
-    public FaceMatchResult compareFaces(byte[] referenceImage, byte[] targetImage) {
-        FaceAnalyzeResult targetQuality = visionClient.analyzeFace(targetImage);
-        FaceCompareResult comparison = visionClient.compareFaces(referenceImage, targetImage);
+  @Override
+  public FaceMatchResult compareFaces(byte[] referenceImage, byte[] targetImage) {
+    FaceAnalyzeResult targetQuality = visionClient.analyzeFace(targetImage);
+    FaceCompareResult comparison = visionClient.compareFaces(referenceImage, targetImage);
 
-        // similarityScore de Python = similarité cosinus (-1 à 1, typiquement 0 à 0.8 en pratique) ;
-        // ×100 pour un affichage cohérent avec les anciens fournisseurs (0-100), pas une vraie
-        // proportion bornée — la décision MATCH/NO_MATCH vient du seuil déjà appliqué côté Python.
-        return new FaceMatchResult(comparison.matched(), comparison.similarityScore() * 100.0, targetQuality.qualityScore());
-    }
+    // similarityScore de Python = similarité cosinus (-1 à 1, typiquement 0 à 0.8 en pratique) ;
+    // ×100 pour un affichage cohérent avec les anciens fournisseurs (0-100), pas une vraie
+    // proportion bornée — la décision MATCH/NO_MATCH vient du seuil déjà appliqué côté Python.
+    return new FaceMatchResult(
+        comparison.matched(), comparison.similarityScore() * 100.0, targetQuality.qualityScore());
+  }
 
-    @Override
-    public String getProviderName() {
-        return "PYTHON_VISION";
-    }
+  @Override
+  public String getProviderName() {
+    return "PYTHON_VISION";
+  }
 }

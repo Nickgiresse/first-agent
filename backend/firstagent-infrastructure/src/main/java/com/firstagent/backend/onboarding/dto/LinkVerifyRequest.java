@@ -9,6 +9,6 @@ import lombok.Setter;
 @Setter
 public class LinkVerifyRequest {
 
-    @NotBlank(message = "Le jeton du lien est obligatoire")
-    private String token;
+  @NotBlank(message = "Le jeton du lien est obligatoire")
+  private String token;
 }

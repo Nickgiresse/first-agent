@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AccountVerificationResponse {
 
-    private boolean eligible;
-    private String firstName;
-    private String lastName;
-    private String sessionToken;
-    private long expiresInSeconds;
+  private boolean eligible;
+  private String firstName;
+  private String lastName;
+  private String sessionToken;
+  private long expiresInSeconds;
 }

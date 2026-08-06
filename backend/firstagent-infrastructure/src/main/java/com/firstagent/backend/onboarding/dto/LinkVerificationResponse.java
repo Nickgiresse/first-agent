@@ -13,10 +13,10 @@ import lombok.Getter;
 @Builder
 public class LinkVerificationResponse {
 
-    private final boolean valid;
-    private final String phone;
-    private final String name;
-    private final String accountNumber;
-    private final String lang;
-    private final boolean alreadyOnboarded;
+  private final boolean valid;
+  private final String phone;
+  private final String name;
+  private final String accountNumber;
+  private final String lang;
+  private final boolean alreadyOnboarded;
 }

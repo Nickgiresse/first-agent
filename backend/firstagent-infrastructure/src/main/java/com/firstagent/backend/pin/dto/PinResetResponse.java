@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PinResetResponse {
 
-    private boolean emailSent;
-    private boolean requiresBranchVisit;
-    private String message;
+  private boolean emailSent;
+  private boolean requiresBranchVisit;
+  private String message;
 }

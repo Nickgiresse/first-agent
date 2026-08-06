@@ -6,7 +6,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface DocumentService {
 
-    DocumentUploadResponse uploadDocument(String sessionToken, DocumentType documentType, MultipartFile file);
+  DocumentUploadResponse uploadDocument(
+      String sessionToken, DocumentType documentType, MultipartFile file);
 
-    boolean hasAllRequiredDocuments(String sessionToken);
+  boolean hasAllRequiredDocuments(String sessionToken);
 }

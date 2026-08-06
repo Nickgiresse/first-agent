@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 public class TermsAcceptanceRequest {
 
-    @AssertTrue(message = "Vous devez accepter les conditions d'utilisation pour continuer")
-    private boolean termsAccepted;
+  @AssertTrue(message = "Vous devez accepter les conditions d'utilisation pour continuer")
+  private boolean termsAccepted;
 }

@@ -4,5 +4,5 @@ import com.firstagent.backend.account.dto.AccountVerificationRequest;
 import com.firstagent.backend.account.dto.AccountVerificationResponse;
 
 public interface AccountService {
-    AccountVerificationResponse verifyAccount(AccountVerificationRequest request);
+  AccountVerificationResponse verifyAccount(AccountVerificationRequest request);
 }

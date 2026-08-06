@@ -12,24 +12,27 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SwaggerConfig {
 
-    private static final String SECURITY_SCHEME_NAME = "bearerAuth";
+  private static final String SECURITY_SCHEME_NAME = "bearerAuth";
 
-    @Bean
-    public OpenAPI openApiConfiguration() {
-        return new OpenAPI()
-            .info(new Info()
+  @Bean
+  public OpenAPI openApiConfiguration() {
+    return new OpenAPI()
+        .info(
+            new Info()
                 .title("FirstAgent - API Onboarding Bancaire")
-                .description("API REST pour l'onboarding bancaire sans connexion. Le compte commence par 10005 et l'API reçoit les 18 chiffres restants.")
+                .description(
+                    "API REST pour l'onboarding bancaire sans connexion. Le compte commence par 10005 et l'API reçoit les 18 chiffres restants.")
                 .version("v1.0")
-                .contact(new Contact()
-                    .name("Équipe FirstAgent")
-                    .email("dev@firstagent.com")))
-            .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
-            .components(new Components()
-                .addSecuritySchemes(SECURITY_SCHEME_NAME, new SecurityScheme()
-                    .name(SECURITY_SCHEME_NAME)
-                    .type(SecurityScheme.Type.HTTP)
-                    .scheme("bearer")
-                    .bearerFormat("JWT")));
-    }
+                .contact(new Contact().name("Équipe FirstAgent").email("dev@firstagent.com")))
+        .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
+        .components(
+            new Components()
+                .addSecuritySchemes(
+                    SECURITY_SCHEME_NAME,
+                    new SecurityScheme()
+                        .name(SECURITY_SCHEME_NAME)
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")));
+  }
 }

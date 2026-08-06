@@ -12,17 +12,19 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class FaceVerificationController {
 
-    private final FaceVerificationService faceVerificationService;
+  private final FaceVerificationService faceVerificationService;
 
-    @PostMapping("/face-verification/verify")
-    public ResponseEntity<ApiResponse<FaceVerificationResponse>> verify(@RequestHeader("X-Session-Token") String sessionToken) {
-        FaceVerificationResponse response = faceVerificationService.verifyFace(sessionToken);
-        return ResponseEntity.ok(ApiResponse.success(response, "Vérification faciale réussie"));
-    }
+  @PostMapping("/face-verification/verify")
+  public ResponseEntity<ApiResponse<FaceVerificationResponse>> verify(
+      @RequestHeader("X-Session-Token") String sessionToken) {
+    FaceVerificationResponse response = faceVerificationService.verifyFace(sessionToken);
+    return ResponseEntity.ok(ApiResponse.success(response, "Vérification faciale réussie"));
+  }
 
-    @GetMapping("/face-verification")
-    public ResponseEntity<ApiResponse<FaceVerificationResponse>> get(@RequestHeader("X-Session-Token") String sessionToken) {
-        FaceVerificationResponse response = faceVerificationService.getVerification(sessionToken);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+  @GetMapping("/face-verification")
+  public ResponseEntity<ApiResponse<FaceVerificationResponse>> get(
+      @RequestHeader("X-Session-Token") String sessionToken) {
+    FaceVerificationResponse response = faceVerificationService.getVerification(sessionToken);
+    return ResponseEntity.ok(ApiResponse.success(response));
+  }
 }

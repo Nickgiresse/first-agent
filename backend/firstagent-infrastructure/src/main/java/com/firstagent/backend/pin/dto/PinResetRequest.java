@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 public class PinResetRequest {
 
-    @NotBlank(message = "Le numéro de compte est obligatoire")
-    private String accountNumber;
+  @NotBlank(message = "Le numéro de compte est obligatoire")
+  private String accountNumber;
 }

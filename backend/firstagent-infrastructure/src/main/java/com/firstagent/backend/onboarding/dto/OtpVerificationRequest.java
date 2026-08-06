@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class OtpVerificationRequest {
-    @NotBlank(message = "Le code de vérification est obligatoire")
-    @Pattern(regexp = "\\d{6}", message = "Le code doit contenir exactement 6 chiffres")
-    private String code;
+  @NotBlank(message = "Le code de vérification est obligatoire")
+  @Pattern(regexp = "\\d{6}", message = "Le code doit contenir exactement 6 chiffres")
+  private String code;
 }

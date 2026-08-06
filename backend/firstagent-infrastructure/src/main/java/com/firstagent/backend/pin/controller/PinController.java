@@ -18,21 +18,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PinController {
 
-    private final PinResetService pinResetService;
+  private final PinResetService pinResetService;
 
-    @PostMapping("/reset/request")
-    public ResponseEntity<ApiResponse<PinResetResponse>> requestReset(
-        @Valid @RequestBody PinResetRequest request
-    ) {
-        PinResetResponse response = pinResetService.requestReset(request);
-        return ResponseEntity.ok(ApiResponse.success(response, response.getMessage()));
-    }
+  @PostMapping("/reset/request")
+  public ResponseEntity<ApiResponse<PinResetResponse>> requestReset(
+      @Valid @RequestBody PinResetRequest request) {
+    PinResetResponse response = pinResetService.requestReset(request);
+    return ResponseEntity.ok(ApiResponse.success(response, response.getMessage()));
+  }
 
-    @PostMapping("/reset/confirm")
-    public ResponseEntity<ApiResponse<Void>> confirmReset(
-        @Valid @RequestBody PinResetConfirmRequest request
-    ) {
-        pinResetService.confirmReset(request);
-        return ResponseEntity.ok(ApiResponse.success(null, "PIN réinitialisé avec succès"));
-    }
+  @PostMapping("/reset/confirm")
+  public ResponseEntity<ApiResponse<Void>> confirmReset(
+      @Valid @RequestBody PinResetConfirmRequest request) {
+    pinResetService.confirmReset(request);
+    return ResponseEntity.ok(ApiResponse.success(null, "PIN réinitialisé avec succès"));
+  }
 }

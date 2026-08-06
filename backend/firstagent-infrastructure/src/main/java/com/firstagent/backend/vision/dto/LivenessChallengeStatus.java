@@ -8,9 +8,8 @@ public record LivenessChallengeStatus(
     List<String> completedActions,
     List<String> remainingActions,
     boolean allActionsCompleted,
-    String decision
-) {
-    public boolean live() {
-        return "LIVE".equals(decision);
-    }
+    String decision) {
+  public boolean live() {
+    return "LIVE".equals(decision);
+  }
 }

@@ -8,15 +8,15 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PinServiceImpl implements PinService {
 
-    private final PasswordEncoder passwordEncoder;
+  private final PasswordEncoder passwordEncoder;
 
-    @Override
-    public String hashPin(String rawPin) {
-        return passwordEncoder.encode(rawPin);
-    }
+  @Override
+  public String hashPin(String rawPin) {
+    return passwordEncoder.encode(rawPin);
+  }
 
-    @Override
-    public boolean matches(String rawPin, String pinHash) {
-        return passwordEncoder.matches(rawPin, pinHash);
-    }
+  @Override
+  public boolean matches(String rawPin, String pinHash) {
+    return passwordEncoder.matches(rawPin, pinHash);
+  }
 }

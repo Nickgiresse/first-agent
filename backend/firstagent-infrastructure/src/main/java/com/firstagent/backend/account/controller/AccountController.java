@@ -17,13 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AccountController {
 
-    private final AccountService accountService;
+  private final AccountService accountService;
 
-    @PostMapping("/verify")
-    public ResponseEntity<ApiResponse<AccountVerificationResponse>> verifyAccount(
-        @Valid @RequestBody AccountVerificationRequest request
-    ) {
-        AccountVerificationResponse response = accountService.verifyAccount(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Compte vérifié avec succès"));
-    }
+  @PostMapping("/verify")
+  public ResponseEntity<ApiResponse<AccountVerificationResponse>> verifyAccount(
+      @Valid @RequestBody AccountVerificationRequest request) {
+    AccountVerificationResponse response = accountService.verifyAccount(request);
+    return ResponseEntity.ok(ApiResponse.success(response, "Compte vérifié avec succès"));
+  }
 }

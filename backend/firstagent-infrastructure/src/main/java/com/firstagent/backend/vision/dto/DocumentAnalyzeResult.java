@@ -8,6 +8,4 @@ public record DocumentAnalyzeResult(
     boolean typeConfirmed,
     String side,
     int qualityScore,
-    List<String> issues
-) {
-}
+    List<String> issues) {}

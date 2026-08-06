@@ -6,6 +6,4 @@ public record DocumentExtractResult(
     ExtractedDocumentFields fields,
     String rawText,
     double averageConfidence,
-    List<String> issues
-) {
-}
+    List<String> issues) {}

@@ -106,6 +106,38 @@
 		</pluginManagement>
 		<plugins>
 			<!--
+			  Formatage mécanisé (charte §10). google-java-format ne se
+			  configure pas : c'est le but, il retire le sujet des revues.
+			  `spotless:apply` reformate, `spotless:check` refuse un code non
+			  formaté. Le contrôle est attaché à `validate` pour échouer avant
+			  la compilation plutôt qu'après les tests.
+			-->
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>2.44.5</version>
+				<configuration>
+					<java>
+						<googleJavaFormat>
+							<version>1.28.0</version>
+						</googleJavaFormat>
+						<removeUnusedImports/>
+						<trimTrailingWhitespace/>
+						<endWithNewline/>
+					</java>
+				</configuration>
+				<executions>
+					<execution>
+						<id>controle-formatage</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--
 			  Couverture de tests (charte §11). Le seuil visé est 80 %, mais le
 			  rendre bloquant aujourd'hui casserait le build : la couverture
 			  réelle en est loin. La mesure est donc activée d'abord, le seuil

@@ -8,6 +8,4 @@ public record LivenessChallengeVerify(
     boolean actionCompleted,
     List<String> completedActions,
     List<String> remainingActions,
-    boolean allActionsCompleted
-) {
-}
+    boolean allActionsCompleted) {}

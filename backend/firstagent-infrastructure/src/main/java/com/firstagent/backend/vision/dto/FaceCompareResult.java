@@ -5,9 +5,8 @@ public record FaceCompareResult(
     String decision,
     double threshold,
     boolean sourceFaceDetected,
-    boolean targetFaceDetected
-) {
-    public boolean matched() {
-        return "MATCH".equals(decision);
-    }
+    boolean targetFaceDetected) {
+  public boolean matched() {
+    return "MATCH".equals(decision);
+  }
 }

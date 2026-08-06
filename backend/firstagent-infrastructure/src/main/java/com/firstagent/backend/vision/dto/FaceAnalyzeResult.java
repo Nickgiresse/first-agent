@@ -11,6 +11,4 @@ public record FaceAnalyzeResult(
     boolean noseDetected,
     boolean mouthDetected,
     int qualityScore,
-    List<String> issues
-) {
-}
+    List<String> issues) {}

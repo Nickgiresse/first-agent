@@ -1,12 +1,11 @@
 package com.firstagent.backend.common.dto;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @Builder
@@ -14,11 +13,10 @@ import java.util.List;
 @AllArgsConstructor
 public class ErrorResponse {
 
-    private boolean success;
-    private String errorCode;
-    private String message;
-    private List<String> details;
+  private boolean success;
+  private String errorCode;
+  private String message;
+  private List<String> details;
 
-    @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+  @Builder.Default private LocalDateTime timestamp = LocalDateTime.now();
 }

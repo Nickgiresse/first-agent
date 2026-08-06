@@ -17,6 +17,4 @@ public record ExtractedDocumentFields(
     String kitNumber,
     String requestIdentifier,
     String paymentAmount,
-    LocalDate paymentDate
-) {
-}
+    LocalDate paymentDate) {}

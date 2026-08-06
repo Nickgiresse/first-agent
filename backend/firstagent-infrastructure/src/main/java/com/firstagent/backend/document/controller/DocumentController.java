@@ -14,15 +14,15 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class DocumentController {
 
-    private final DocumentService documentService;
+  private final DocumentService documentService;
 
-    @PostMapping(value = "/upload", consumes = "multipart/form-data")
-    public ResponseEntity<ApiResponse<DocumentUploadResponse>> uploadDocument(
-        @RequestHeader("X-Session-Token") String sessionToken,
-        @RequestParam("documentType") DocumentType documentType,
-        @RequestParam("file") MultipartFile file
-    ) {
-        DocumentUploadResponse response = documentService.uploadDocument(sessionToken, documentType, file);
-        return ResponseEntity.ok(ApiResponse.success(response, "Document téléversé avec succès"));
-    }
+  @PostMapping(value = "/upload", consumes = "multipart/form-data")
+  public ResponseEntity<ApiResponse<DocumentUploadResponse>> uploadDocument(
+      @RequestHeader("X-Session-Token") String sessionToken,
+      @RequestParam("documentType") DocumentType documentType,
+      @RequestParam("file") MultipartFile file) {
+    DocumentUploadResponse response =
+        documentService.uploadDocument(sessionToken, documentType, file);
+    return ResponseEntity.ok(ApiResponse.success(response, "Document téléversé avec succès"));
+  }
 }

@@ -9,8 +9,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class KycRequest {
-    @NotBlank(message = "L'adresse e-mail est obligatoire")
-    @Email(message = "Format d'email invalide")
-    @Size(max = 150, message = "L'email ne doit pas dépasser 150 caractères")
-    private String email;
+  @NotBlank(message = "L'adresse e-mail est obligatoire")
+  @Email(message = "Format d'email invalide")
+  @Size(max = 150, message = "L'email ne doit pas dépasser 150 caractères")
+  private String email;
 }
