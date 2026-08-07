@@ -37,9 +37,25 @@ export class TermsConditions {
     this.location.back();
   }
 
-  /** Marque la lecture comme effective quand le bas du texte est atteint (tolérance 24 px). */
+  /**
+   * Marque la lecture comme effective quand le bas du texte est atteint.
+   *
+   * La tolérance de 24 px absorbe les arrondis de rendu et les barres de
+   * défilement : sans elle, il resterait souvent un ou deux pixels et le
+   * dernier écran ne serait jamais reconnu comme atteint.
+   *
+   * Le contrôle de hauteur n'est pas superflu. Sur un élément qui n'est pas
+   * rendu, les trois mesures valent zéro, et la comparaison devient
+   * « 0 >= -24 », donc vraie : la lecture serait réputée faite sans que
+   * personne n'ait rien lu. Ce défaut exact a déjà été rencontré et corrigé sur
+   * le parcours WhatsApp, où le bloc des CGU appartenait à une étape encore
+   * masquée.
+   */
   onTermsScroll(event: Event): void {
     const el = event.target as HTMLElement;
+    if (!el.clientHeight) {
+      return;
+    }
     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
       this.scrolledToEnd.set(true);
     }
