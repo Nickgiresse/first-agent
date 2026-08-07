@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { LanguageService } from '../../../core/services/language';
 
@@ -16,6 +16,7 @@ import { LanguageService } from '../../../core/services/language';
  */
 @Component({
   selector: 'afb-terms-conditions',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './terms-conditions.html',
   styleUrl: './terms-conditions.scss'

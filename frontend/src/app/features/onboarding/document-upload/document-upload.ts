@@ -1,11 +1,12 @@
 import { Location } from '@angular/common';
 import { errorMessage } from '../../../core/utils/error-message';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DocumentService } from '../../../core/services/document';
 
 @Component({
   selector: 'afb-document-upload',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [],
   templateUrl: './document-upload.html',

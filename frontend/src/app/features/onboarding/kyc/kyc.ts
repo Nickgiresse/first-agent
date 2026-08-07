@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { OnboardingState } from '../../../core/services/onboarding-state';
@@ -10,7 +10,8 @@ type Phase = 'EMAIL' | 'OTP';
 
 const RESEND_COOLDOWN_SECONDS = 45;
 
-@Component({ selector: 'afb-kyc', imports: [ReactiveFormsModule], templateUrl: './kyc.html', styleUrl: './kyc.scss' })
+@Component({ selector: 'afb-kyc',
+  changeDetection: ChangeDetectionStrategy.OnPush, imports: [ReactiveFormsModule], templateUrl: './kyc.html', styleUrl: './kyc.scss' })
 export class Kyc {
   private readonly navigation = inject(NavigationService);
   readonly lang = inject(LanguageService);

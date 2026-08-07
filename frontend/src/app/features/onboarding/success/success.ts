@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { LanguageService } from '../../../core/services/language';
 import { OnboardingState } from '../../../core/services/onboarding-state';
@@ -17,6 +17,7 @@ const CONFETTI_COUNT = 60;
 
 @Component({
   selector: 'afb-success',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './success.html',
   styleUrl: './success.scss'

@@ -1,7 +1,7 @@
 import { Location } from '@angular/common';
 import { errorMessage } from '../../../core/utils/error-message';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, DestroyRef, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { CameraService } from '../../../core/services/camera';
 import { DocumentService } from '../../../core/services/document';
 import { QualityReport, analyzeImageQuality, computeCoverSourceRect } from '../../../core/services/image-quality-analyzer';
@@ -18,6 +18,7 @@ const ANALYSIS_HEIGHT = 150;
 
 @Component({
   selector: 'afb-document-scan',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './document-scan.html',
   styleUrl: './document-scan.scss'

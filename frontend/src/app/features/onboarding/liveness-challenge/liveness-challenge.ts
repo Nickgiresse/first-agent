@@ -1,7 +1,7 @@
 import { Location } from '@angular/common';
 import { errorMessage } from '../../../core/utils/error-message';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { CameraService } from '../../../core/services/camera';
 import { DocumentService } from '../../../core/services/document';
 import { computeCoverSourceRect } from '../../../core/services/image-quality-analyzer';
@@ -17,6 +17,7 @@ const CAPTURE_SIZE = 480; // carré, suffisant pour un visage
 
 @Component({
   selector: 'afb-liveness-challenge',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './liveness-challenge.html',
   styleUrl: './liveness-challenge.scss'

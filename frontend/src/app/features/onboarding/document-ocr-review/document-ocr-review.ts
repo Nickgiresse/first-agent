@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DocumentService } from '../../../core/services/document';
 import { DocumentKind } from '../../../core/models/ocr.model';
@@ -8,6 +8,7 @@ import { LanguageService } from '../../../core/services/language';
 
 @Component({
   selector: 'afb-document-ocr-review',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule],
   templateUrl: './document-ocr-review.html',
   styleUrl: './document-ocr-review.scss'

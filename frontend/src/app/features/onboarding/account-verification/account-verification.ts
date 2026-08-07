@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { NavigationService } from '../../../core/services/navigation';
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AccountService } from '../../../core/services/account';
 import { LanguageService } from '../../../core/services/language';
 import { OnboardingState } from '../../../core/services/onboarding-state';
@@ -8,6 +8,7 @@ import { AccountNumberInput } from '../../../shared/components/account-number-in
 
 @Component({
   selector: 'afb-account-verification',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AccountNumberInput],
   templateUrl: './account-verification.html',
   styleUrl: './account-verification.scss'

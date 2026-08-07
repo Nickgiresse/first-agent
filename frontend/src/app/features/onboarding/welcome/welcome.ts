@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { OnboardingState } from '../../../core/services/onboarding-state';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { LanguageService } from '../../../core/services/language';
 
-@Component({ selector: 'afb-welcome', imports: [RouterLink], templateUrl: './welcome.html', styleUrl: './welcome.scss' })
+@Component({ selector: 'afb-welcome',
+  changeDetection: ChangeDetectionStrategy.OnPush, imports: [RouterLink], templateUrl: './welcome.html', styleUrl: './welcome.scss' })
 export class Welcome implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly state = inject(OnboardingState);

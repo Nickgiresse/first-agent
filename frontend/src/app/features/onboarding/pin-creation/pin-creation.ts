@@ -1,12 +1,13 @@
 import { Location } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NavigationService } from '../../../core/services/navigation';
 import { OnboardingService } from '../../../core/services/onboarding';
 import { OnboardingState } from '../../../core/services/onboarding-state';
 import { LanguageService } from '../../../core/services/language';
 
-@Component({ selector: 'afb-pin-creation', imports: [ReactiveFormsModule], templateUrl: './pin-creation.html', styleUrl: './pin-creation.scss' })
+@Component({ selector: 'afb-pin-creation',
+  changeDetection: ChangeDetectionStrategy.OnPush, imports: [ReactiveFormsModule], templateUrl: './pin-creation.html', styleUrl: './pin-creation.scss' })
 export class PinCreation {
   private readonly service = inject(OnboardingService); private readonly navigation = inject(NavigationService); private readonly location = inject(Location);
   private readonly state = inject(OnboardingState);
