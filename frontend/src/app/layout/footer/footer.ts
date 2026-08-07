@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'app-footer',
+  selector: 'afb-footer',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './footer.html',
   styleUrl: './footer.scss',

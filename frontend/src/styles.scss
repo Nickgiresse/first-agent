@@ -1,5 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@use 'styles/polices' as polices;
 
+// Jetons de couleur (charte frontend §15.1).
+//
+// Aucune valeur hexadécimale ne doit figurer dans une feuille de composant :
+// elle y devient invisible depuis le design system, et une évolution de charte
+// graphique oblige alors à parcourir tout le code au lieu de modifier un
+// endroit. Les jetons portent un rôle, pas une teinte : `--color-danger` reste
+// juste si le rouge devient orange, `--color-red` ne l'est plus.
 :root {
   --color-primary: #c8102e;
   --color-primary-dark: #9e0d25;
@@ -9,8 +16,24 @@
   --color-border: #d8dce3;
   --color-surface: #ffffff;
   --color-canvas: #f5f6f8;
-  --font-ui: 'DM Sans', Arial, sans-serif;
-  --font-display: 'Manrope', Arial, sans-serif;
+
+  // États du parcours. Ces trois familles manquaient : les écrans les
+  // écrivaient en dur, ce qui rendait un même message d'information bleu à un
+  // endroit et non ailleurs, sans que rien ne l'arbitre.
+  --color-info: #0369a1;
+  --color-info-soft: #f0f9ff;
+  --color-info-border: #bae6fd;
+  --color-success-soft: #f4fff8;
+  --color-danger-soft: #fff7f8;
+
+  // Fond des vues caméra. Un noir franc, et non l'encre du texte : il sert à
+  // ce que l'image vidéo ne soit pas cernée d'une teinte qui fausse la
+  // perception des couleurs du document présenté.
+  --color-camera-backdrop: #000000;
+  // Les familles de marque restent en tête : elles prennent le relais d'elles-mêmes
+  // dès que les fichiers sont déposés et le drapeau de styles/_polices.scss activé.
+  --font-ui: 'DM Sans', #{polices.$pile-systeme};
+  --font-display: 'Manrope', #{polices.$pile-systeme};
   --shadow: 0 16px 36px rgba(31, 18, 22, .08);
 }
 

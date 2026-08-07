@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
-  selector: 'app-stepper',
+  selector: 'afb-stepper',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './stepper.html',
   styleUrl: './stepper.scss',

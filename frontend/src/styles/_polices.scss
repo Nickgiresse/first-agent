@@ -1,0 +1,72 @@
+// Polices de l'application.
+//
+// POURQUOI CE FICHIER EXISTE
+//
+// Les polices étaient chargées depuis `fonts.googleapis.com`. La charte
+// frontend §20.2 impose de les héberger localement, et la charte backend §12
+// exige des builds hors ligne. Ce n'est pas une exigence théorique ici : cet
+// hôte est filtré par l'inspection TLS du réseau interne, et la requête reçoit
+// une page de blocage. Toute chaîne d'intégration interne butera dessus.
+//
+// L'import distant est donc supprimé. Ce fichier prépare son remplacement.
+//
+// ÉTAT ACTUEL
+//
+// Les huit fichiers sont dans src/assets/fonts/, extraits des paquets
+// @fontsource/dm-sans et @fontsource/manrope. Sous-ensemble latin uniquement :
+// les autres jeux de caractères tripleraient le poids sans servir à ce
+// parcours. Environ 14 Ko par graisse.
+//
+// POURQUOI UN DRAPEAU PLUTÔT QU'UNE DÉCLARATION INCONDITIONNELLE
+//
+// Un @font-face qui désigne un fichier absent ne casse rien, mais provoque une
+// requête en échec par famille et par graisse à chaque chargement de page. Le
+// drapeau permet de retomber proprement sur la pile système si les fichiers
+// devaient être retirés du dépôt, sans laisser ce bruit derrière lui.
+//
+// Les variables --font-ui et --font-display citent les familles de marque en
+// tête de pile : le repli s'opère de lui-même, graisse par graisse.
+
+$polices-locales-disponibles: true !default;
+
+// Pile de repli.
+//
+// `Arial, sans-serif` seul, ce qu'utilisait le code, donne un rendu daté et
+// différent sur chaque système. Cette pile prend la police d'interface native
+// de la plateforme : le texte reste net et cohérent avec l'environnement du
+// client, ce qui convient à un parcours bancaire.
+$pile-systeme:
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  'Helvetica Neue',
+  Arial,
+  'Noto Sans',
+  sans-serif;
+
+@if $polices-locales-disponibles {
+  // `font-display: swap` : le texte s'affiche immédiatement avec la police de
+  // repli, puis bascule. Sur un réseau lent, l'alternative serait une page
+  // muette pendant plusieurs secondes.
+
+  @each $graisse in (400, 500, 600, 700) {
+    @font-face {
+      font-family: 'DM Sans';
+      font-style: normal;
+      font-weight: $graisse;
+      font-display: swap;
+      src: url('/assets/fonts/dm-sans-#{$graisse}.woff2') format('woff2');
+    }
+  }
+
+  @each $graisse in (500, 600, 700, 800) {
+    @font-face {
+      font-family: 'Manrope';
+      font-style: normal;
+      font-weight: $graisse;
+      font-display: swap;
+      src: url('/assets/fonts/manrope-#{$graisse}.woff2') format('woff2');
+    }
+  }
+}

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.exception.BusinessException;
@@ -32,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class FaceVerificationServiceImplTest {
 
+  @Mock private JournalAudit journal;
   @Mock private StagingDocumentRepository stagingDocumentRepository;
   @Mock private StagingFaceVerificationResultRepository stagingFaceVerificationResultRepository;
   @Mock private OnboardingSessionService onboardingSessionService;
@@ -50,6 +52,7 @@ class FaceVerificationServiceImplTest {
             stagingDocumentRepository,
             stagingFaceVerificationResultRepository,
             onboardingSessionService,
+            journal,
             storageService,
             faceMatchProvider);
   }

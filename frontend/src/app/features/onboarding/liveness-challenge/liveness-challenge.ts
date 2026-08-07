@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
-import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
-import { Router } from '@angular/router';
+import { errorMessage } from '../../../core/utils/error-message';
+import { NavigationService } from '../../../core/services/navigation';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { CameraService } from '../../../core/services/camera';
 import { DocumentService } from '../../../core/services/document';
 import { computeCoverSourceRect } from '../../../core/services/image-quality-analyzer';
@@ -15,17 +16,18 @@ const PRE_CAPTURE_DELAY_MS = 800; // laisse le temps à la personne de commencer
 const CAPTURE_SIZE = 480; // carré, suffisant pour un visage
 
 @Component({
-  selector: 'app-liveness-challenge',
+  selector: 'afb-liveness-challenge',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './liveness-challenge.html',
   styleUrl: './liveness-challenge.scss'
 })
 export class LivenessChallenge {
+  private readonly navigation = inject(NavigationService);
   readonly lang = inject(LanguageService);
 
   private readonly camera = inject(CameraService);
   private readonly docs = inject(DocumentService);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly location = inject(Location);
 
@@ -160,13 +162,13 @@ export class LivenessChallenge {
 
   private verifyFace(): void {
     this.docs.verifyFace().subscribe({
-      next: () => this.router.navigateByUrl('/onboarding/terms-conditions'),
+      next: () => this.navigation.navigateTo('/onboarding/terms-conditions'),
       error: err => this.fail(err)
     });
   }
 
   private fail(err: unknown): void {
-    const message = (err as any)?.error?.message ?? (err as any)?.message ?? 'La vérification de vivacité a échoué.';
+    const message = errorMessage(err, 'La vérification de vivacité a échoué.');
     this.error.set(message);
     this.phase.set('RETRY');
   }

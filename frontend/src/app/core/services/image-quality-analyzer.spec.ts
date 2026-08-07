@@ -41,7 +41,10 @@ describe('analyzeImageQuality', () => {
   });
 
   it('detects glare when a large portion of the image is near-white', () => {
-    const imageData = buildImageData((x, y) => (y < HEIGHT * 0.2 ? 250 : 128));
+    // `_x` : seule l'ordonnée compte pour simuler un reflet en haut de l'image.
+    // Le tiret bas dit que l'abscisse est ignorée à dessein, ce qu'exige
+    // `noUnusedParameters` et qu'admet la règle ESLint correspondante.
+    const imageData = buildImageData((_x, y) => (y < HEIGHT * 0.2 ? 250 : 128));
 
     const report = analyzeImageQuality(imageData);
 

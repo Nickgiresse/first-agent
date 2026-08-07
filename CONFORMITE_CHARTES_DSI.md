@@ -210,13 +210,44 @@ nommage. Manque SonarQube, qui suppose un serveur.
 **Migrations destructrices.** `V17` répare les identités écrasées par les
 `UPDATE` sans clause `WHERE` de `V3`, `V10` et `V13`.
 
+**Journal forensique scellé** (`V18`), porté depuis le bot WhatsApp. Chaque
+entrée porte un acteur explicite, et est scellée par un HMAC-SHA256 couvrant
+son contenu et l'empreinte de la précédente : supprimer, insérer, modifier ou
+réordonner rompt la chaîne, que la vérification sait localiser. Deux
+déclencheurs en base doublent la garantie en refusant toute suppression et
+toute modification autre que la pose de l'empreinte, là où le chaînage seul
+rendait la falsification détectable sans la rendre impossible.
+
+**Alertes comportementales** balayant ce journal : échecs KYC répétés,
+codes erronés, échecs de vivacité. Trois règles là où la source en a cinq,
+les deux écartées observant un flux de messages et un moteur conversationnel
+que ce service n'a pas. Les cinq points sensibles du parcours sont
+instrumentés, sans qu'aucune donnée personnelle n'entre dans les traces :
+scores de similarité et rangs de tentative, jamais les identités ni les codes
+saisis.
+
+**Masquage des données personnelles dans les traces applicatives.** Les
+journaux techniques quittent le périmètre de la base : ils partent vers un
+agrégateur, sont lus par des exploitants et conservés longtemps. Le masquage
+est appliqué par le formateur Logback, au dernier moment avant l’écriture,
+et non à chaque appel : compter sur chaque instruction de journalisation
+supposerait que personne n’oublie jamais. Numéros, RIB et adresses gardent
+un début et une fin, assez pour suivre un client d’une ligne à l’autre, pas
+assez pour reconstituer la valeur.
+
+**Verrou anti-force-brute de l’OTP réparé.** Défaut préalable trouvé en
+instrumentant : le compteur de tentatives était incrémenté puis annulé avec
+la transaction au moment du rejet, si bien qu'il repartait de zéro à chaque
+essai. La limite de cinq tentatives n'était jamais atteinte et les six
+chiffres du code pouvaient être parcourus sans limite.
+
 ### Reste à faire, par ordre de dépendance
 
 1. **Extraction du contenu métier** vers `domain`, `application` et `commons`.
    Les cinq modules existent et la règle de pureté est tenue, mais le code
    attend encore dans `infrastructure`. C'est la partie longue.
-2. **Relèvement du plancher de couverture** de 30 % vers les 80 % de la
-   charte §11, par paliers. Le laisser à 30 % reviendrait à s'en accommoder.
+2. **Relèvement du plancher de couverture** vers les 80 % de la charte §11,
+   par paliers. Mesure au 06/08/2026 : 44,5 % agrégés, cliquet à 35 %. Le contrôle porte module par module, donc le plancher ne peut dépasser le moins couvert : boot, à 37,5 %, qui ne contient que le point d’entrée. Les modules portant du code réel sont plus haut (commons 97,8 %, domain 46,8 %, infrastructure 40,8 %).
 3. **SonarQube**, une fois un serveur disponible.
 4. **Outillage frontend** : dépôt Nexus, ESLint, crochet de pré-commit,
    préfixe `afb-`, jetons de couleur, polices locales, `OnPush`.

@@ -14,6 +14,25 @@
 	<description>Cœur métier. Aucune dépendance technique.</description>
 
 	<!--
+	  Les seules dépendances admises, et uniquement en portée `test` : de quoi
+	  écrire les tests du domaine. Elles n'entrent pas dans l'artefact livré et
+	  ne contredisent donc pas la règle de pureté, qui porte sur ce que le
+	  métier embarque à l'exécution.
+	-->
+	<dependencies>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<!--
 	  AUCUNE DÉPENDANCE, volontairement. La charte §3 qualifie la pureté de ce
 	  module de non négociable : ni Spring, ni Reactor, ni JPA, ni R2DBC, ni
 	  Lombok. Les règles bannies ci-dessous font échouer le build si l'une

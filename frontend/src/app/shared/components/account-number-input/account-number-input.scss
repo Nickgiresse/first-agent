@@ -9,25 +9,34 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 16px;
   letter-spacing: 0.08em;
-  border: 1px solid var(--border-color, #d1d5db);
+  // Ces propriétés citaient --border-color, --bg-surface, --text-color et
+  // --primary-color, qui n'existent nulle part : le design system nomme
+  // --color-border, --color-surface, --color-ink et --color-primary. Le
+  // composant retombait donc systématiquement sur ses valeurs de repli et ne
+  // suivait pas le thème. Rien ne le signalait, une variable CSS inconnue
+  // n'étant pas une erreur : elle prend simplement la valeur de repli.
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   outline: none;
-  background: var(--bg-surface, #ffffff);
-  color: var(--text-color, #111827);
+  background: var(--color-surface);
+  color: var(--color-ink);
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
-    border-color: var(--primary-color, #0284c7);
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    // Conséquence visible de ce qui précède : l'anneau de focus était bleu
+    // (#0284c7) sur un parcours dont la couleur de marque est rouge. Le jeton
+    // le remet dans la charte.
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: var(--color-muted);
     letter-spacing: 0.05em;
   }
 
   &:disabled {
-    background-color: #f3f4f6;
+    background-color: var(--color-canvas);
     cursor: not-allowed;
   }
 }

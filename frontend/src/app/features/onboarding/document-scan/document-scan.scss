@@ -9,7 +9,7 @@
     margin: 14px 0;
     border-radius: 12px;
     overflow: hidden;
-    background: #000
+    background: var(--color-camera-backdrop)
 }
 
 .scan-viewport video {
@@ -19,7 +19,7 @@
 }
 
 .text-black {
-    color: #000;
+    color: var(--color-camera-backdrop);
     font-weight: 700;
 }
 

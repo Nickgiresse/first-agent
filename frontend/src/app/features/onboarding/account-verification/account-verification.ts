@@ -1,23 +1,24 @@
 import { Location } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationService } from '../../../core/services/navigation';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AccountService } from '../../../core/services/account';
 import { LanguageService } from '../../../core/services/language';
 import { OnboardingState } from '../../../core/services/onboarding-state';
 import { AccountNumberInput } from '../../../shared/components/account-number-input/account-number-input';
 
 @Component({
-  selector: 'app-account-verification',
+  selector: 'afb-account-verification',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AccountNumberInput],
   templateUrl: './account-verification.html',
   styleUrl: './account-verification.scss'
 })
 export class AccountVerification {
+  private readonly navigation = inject(NavigationService);
   readonly lang = inject(LanguageService);
 
   private readonly accountService = inject(AccountService);
   private readonly state = inject(OnboardingState);
-  private readonly router = inject(Router);
   private readonly location = inject(Location);
 
   readonly digits = signal('');
@@ -50,7 +51,7 @@ export class AccountVerification {
           return;
         }
         this.state.setAccountVerified(data.sessionToken, data.firstName, data.lastName, data.expiresInSeconds);
-        this.router.navigateByUrl('/onboarding/kyc');
+        this.navigation.navigateTo('/onboarding/kyc');
       },
       error: err => {
         this.error.set(err?.message ?? err?.error?.message ?? 'Impossible de vérifier ce compte. Veuillez réessayer.');

@@ -1,11 +1,23 @@
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, forwardRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  Output,
+  ViewChild,
+  forwardRef,
+  inject,
+} from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
-  selector: 'app-account-number-input',
+  selector: 'afb-account-number-input',
   standalone: true,
   templateUrl: './account-number-input.html',
   styleUrl: './account-number-input.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -15,13 +27,34 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   ]
 })
 export class AccountNumberInput implements ControlValueAccessor {
+  /**
+   * Nécessaire malgré `OnPush`, et c'est justement pourquoi.
+   *
+   * Un composant en `OnPush` n'est réexaminé que sur un de ses propres
+   * événements, un changement d'entrée ou un signal. Or l'API de formulaires
+   * appelle `writeValue` et `setDisabledState` en dehors de tout cela : ces
+   * deux méthodes modifieraient l'état sans que la vue en tienne compte.
+   *
+   * Le champ resterait alors actif à l'écran alors que le formulaire le croit
+   * désactivé, ce qui n'échoue nulle part et ne se voit qu'à l'usage.
+   */
+  private readonly changeDetector = inject(ChangeDetectorRef);
+
   @Input() placeholder = '12345 67890123456 78';
   @Input() disabled = false;
   @Input() set value(val: string | null) {
     this.writeValue(val);
   }
   @Output() valueChange = new EventEmitter<string>();
-  @Output() blur = new EventEmitter<void>();
+  /**
+   * Perte de focus du champ.
+   *
+   * Nommée `blurred` et non `blur` : une sortie portant le nom d'un événement
+   * DOM standard le masque. Un parent écrivant `(blur)` sur ce composant
+   * recevrait cette sortie et non l'événement du navigateur, sans que rien ne
+   * signale la substitution.
+   */
+  @Output() blurred = new EventEmitter<void>();
 
   @ViewChild('inputRef') inputRef!: ElementRef<HTMLInputElement>;
 
@@ -39,6 +72,7 @@ export class AccountNumberInput implements ControlValueAccessor {
       if (this.inputRef?.nativeElement) {
         this.inputRef.nativeElement.value = this.formattedValue;
       }
+      this.changeDetector.markForCheck();
     }
   }
 
@@ -52,6 +86,9 @@ export class AccountNumberInput implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+    // `disabled` est lié dans le gabarit : sans ce rappel, le champ resterait
+    // saisissable à l'écran alors que le formulaire le considère désactivé.
+    this.changeDetector.markForCheck();
   }
 
   format(digits: string): string {
@@ -145,6 +182,6 @@ export class AccountNumberInput implements ControlValueAccessor {
 
   handleBlur(): void {
     this.onTouched();
-    this.blur.emit();
+    this.blurred.emit();
   }
 }

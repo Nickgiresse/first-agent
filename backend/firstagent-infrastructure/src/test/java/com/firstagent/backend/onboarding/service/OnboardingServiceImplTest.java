@@ -11,6 +11,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.firstagent.backend.account.entity.BankAccount;
+import com.firstagent.backend.audit.model.EvenementAudit;
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.enums.LivenessStatus;
@@ -51,6 +53,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -59,10 +62,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 @ExtendWith(MockitoExtension.class)
 class OnboardingServiceImplTest {
 
+  @Mock private JournalAudit journal;
   @Mock private OnboardingSessionService onboardingSessionService;
   @Mock private CustomerRepository customerRepository;
   @Mock private PinService pinService;
@@ -92,6 +97,7 @@ class OnboardingServiceImplTest {
   void setUp() {
     service =
         new OnboardingServiceImpl(
+            journal,
             onboardingSessionService,
             customerRepository,
             pinService,
@@ -229,6 +235,69 @@ class OnboardingServiceImplTest {
     assertThatThrownBy(() -> service.verifyEmailOtp(sessionToken, otpRequest("123456")))
         .isInstanceOf(BusinessException.class)
         .hasMessageContaining("Trop de tentatives");
+  }
+
+  @Test
+  @DisplayName("le compteur de tentatives survit au rejet, sans quoi le verrou ne servirait à rien")
+  void verifyEmailOtp_leCompteurDeTentativesNEstPasAnnuleParLeRejet() throws NoSuchMethodException {
+    // Ce test porte sur l'annotation, parce que c'est là que siégeait le
+    // défaut. BusinessException étant une exception non contrôlée, une
+    // transaction ordinaire annulait tout, y compris l'incrément du compteur
+    // écrit juste avant le rejet : le compteur repartait de zéro à chaque
+    // essai, le verrou n'était jamais atteint, et les six chiffres du code
+    // pouvaient être parcourus sans limite. La protection tenait donc
+    // entièrement à cette clause.
+    Transactional annotation =
+        OnboardingServiceImpl.class
+            .getMethod("verifyEmailOtp", String.class, OtpVerificationRequest.class)
+            .getAnnotation(Transactional.class);
+
+    assertThat(annotation).isNotNull();
+    assertThat(annotation.noRollbackFor()).contains(BusinessException.class);
+  }
+
+  @Test
+  @DisplayName("un code erroné est journalisé, sans le code saisi")
+  void verifyEmailOtp_codeErrone_estJournalise() {
+    OnboardingSession session = accountVerifiedSession();
+    session.setPendingEmail("jean@example.com");
+    session.setEmailOtpCodeHash("hashed-code");
+    session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(5));
+    session.setEmailOtpAttempts(0);
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+    when(passwordEncoder.matches("000000", "hashed-code")).thenReturn(false);
+
+    assertThatThrownBy(() -> service.verifyEmailOtp(sessionToken, otpRequest("000000")))
+        .isInstanceOf(BusinessException.class);
+
+    ArgumentCaptor<JournalAudit.EcritureAudit> trace =
+        ArgumentCaptor.forClass(JournalAudit.EcritureAudit.class);
+    verify(journal).enregistrer(trace.capture());
+    assertThat(trace.getValue().typeEvenement()).isEqualTo(EvenementAudit.OTP_ERRONE);
+    // Le rang de la tentative, jamais le code : journaliser les codes essayés
+    // livrerait par recoupement l'espace parcouru à qui lit le journal.
+    assertThat(trace.getValue().details()).contains("tentative 1").doesNotContain("000000");
+  }
+
+  @Test
+  @DisplayName("le verrouillage est journalisé à part du simple code erroné")
+  void verifyEmailOtp_verrouillage_estJournaliseAPart() {
+    OnboardingSession session = accountVerifiedSession();
+    session.setPendingEmail("jean@example.com");
+    session.setEmailOtpCodeHash("hashed-code");
+    session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(5));
+    session.setEmailOtpAttempts(5);
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+    assertThatThrownBy(() -> service.verifyEmailOtp(sessionToken, otpRequest("123456")))
+        .isInstanceOf(BusinessException.class);
+
+    ArgumentCaptor<JournalAudit.EcritureAudit> trace =
+        ArgumentCaptor.forClass(JournalAudit.EcritureAudit.class);
+    verify(journal).enregistrer(trace.capture());
+    // Deux événements distincts : les confondre empêcherait de les compter
+    // séparément, alors qu'atteindre le verrou est un signal bien plus fort.
+    assertThat(trace.getValue().typeEvenement()).isEqualTo(EvenementAudit.OTP_VERROUILLE);
   }
 
   // Les deux tests du contournement /kyc/skip sont retirés avec la

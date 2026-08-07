@@ -1,22 +1,23 @@
 import { Location } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { NavigationService } from '../../../core/services/navigation';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { DocumentService } from '../../../core/services/document';
 import { DocumentKind } from '../../../core/models/ocr.model';
 import { LanguageService } from '../../../core/services/language';
 
 @Component({
-  selector: 'app-document-ocr-review',
+  selector: 'afb-document-ocr-review',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule],
   templateUrl: './document-ocr-review.html',
   styleUrl: './document-ocr-review.scss'
 })
 export class DocumentOcrReview implements OnInit {
+  private readonly navigation = inject(NavigationService);
   readonly lang = inject(LanguageService);
 
   private readonly docs = inject(DocumentService);
-  private readonly router = inject(Router);
   private readonly location = inject(Location);
 
   readonly documentKind = signal<DocumentKind>('UNKNOWN');
@@ -97,7 +98,7 @@ export class DocumentOcrReview implements OnInit {
     this.submitting.set(true);
     this.error.set(null);
     this.docs.confirmOcrData(this.form.getRawValue()).subscribe({
-      next: () => this.router.navigateByUrl('/onboarding/liveness-challenge'),
+      next: () => this.navigation.navigateTo('/onboarding/liveness-challenge'),
       error: error => {
         this.error.set(error?.message ?? error?.error?.message ?? 'Impossible de confirmer ces informations.');
         this.submitting.set(false);

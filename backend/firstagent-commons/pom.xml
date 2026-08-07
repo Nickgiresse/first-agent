@@ -24,6 +24,18 @@
 			<artifactId>firstagent-domain</artifactId>
 		</dependency>
 
+		<!--
+		  Logback, pour le convertisseur qui masque les données personnelles
+		  dans les traces. En portée `provided` : la bibliothèque est fournie à
+		  l'exécution par le démarreur Spring Boot, ce module n'a pas à
+		  l'embarquer ni à en imposer la version.
+		-->
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>

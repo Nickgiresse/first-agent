@@ -163,14 +163,32 @@
 						</goals>
 					</execution>
 					<!--
-					  Cliquet de non-régression. Mesure du 06/08/2026 : 34 % sur
-					  4 383 instructions. Le plancher est fixé juste en dessous
-					  pour ne pas rendre le build instable, et sa seule fonction
-					  est d'empêcher la couverture de baisser.
+					  Cliquet de non-régression. Sa seule fonction est
+					  d'empêcher la couverture de baisser, et il est fixé juste
+					  en dessous de la mesure pour ne pas rendre le build
+					  instable.
 
 					  Il doit être relevé à chaque palier gagné, jusqu'aux 80 %
-					  exigés par la charte §11. Le laisser à 30 % indéfiniment
-					  reviendrait à s'en accommoder.
+					  exigés par la charte §11 : le laisser en place pendant que
+					  la couverture progresse reviendrait à s'en accommoder.
+
+					  Historique des relèvements :
+					    06/08/2026  34 % mesurés sur 4 383 instructions  -> 30 %
+					    06/08/2026  39,6 % sur 6 123 instructions        -> 35 %
+					                (journal d'audit et alertes, testés)
+					    06/08/2026  41,9 % agrégés                      -> 35 %
+					                (instrumentation du parcours, vivacité et
+					                 règles d'alerte testées)
+
+					  POURQUOI LE PLANCHER EST SOUS LA MESURE AGRÉGÉE. Le contrôle
+					  s'applique module par module, pas sur l'ensemble : le
+					  plancher ne peut donc pas dépasser le module le moins
+					  couvert. C'est aujourd'hui le module boot, à 37,5 %, et pour
+					  une raison sans portée : il ne contient que le point
+					  d'entrée, dont la méthode main se borne à démarrer Spring
+					  et n'a rien à vérifier. Les modules qui portent du code réel sont
+					  plus haut : commons 97,8 %, domain 46,8 %,
+					  infrastructure 40,8 %.
 					-->
 					<execution>
 						<id>plancher-de-couverture</id>
@@ -186,7 +204,7 @@
 										<limit>
 											<counter>INSTRUCTION</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.30</minimum>
+											<minimum>0.35</minimum>
 										</limit>
 									</limits>
 								</rule>

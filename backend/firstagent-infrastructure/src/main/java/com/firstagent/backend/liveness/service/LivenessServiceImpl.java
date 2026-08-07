@@ -1,5 +1,8 @@
 package com.firstagent.backend.liveness.service;
 
+import com.firstagent.backend.audit.model.EvenementAudit;
+import com.firstagent.backend.audit.model.TypeActeur;
+import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.LivenessStatus;
 import com.firstagent.backend.common.exception.ResourceNotFoundException;
 import com.firstagent.backend.liveness.dto.ChallengeStartResponse;
@@ -26,6 +29,7 @@ public class LivenessServiceImpl implements LivenessService {
 
   private static final String ACTIONS_SEPARATOR = ",";
 
+  private final JournalAudit journal;
   private final StagingLivenessResultRepository stagingLivenessResultRepository;
   private final OnboardingSessionService onboardingSessionService;
   private final PythonVisionClient visionClient;
@@ -71,6 +75,24 @@ public class LivenessServiceImpl implements LivenessService {
       result.setVerifiedAt(LocalDateTime.now());
     }
     stagingLivenessResultRepository.save(result);
+
+    if (!verification.actionCompleted()) {
+      // Signal volontairement faible pris isolément : un client peut cligner
+      // trop lentement ou mal cadrer son visage. C'est leur accumulation sur
+      // 24 heures que la règle d'alerte observe, une photo imprimée ou un
+      // écran présenté devant l'objectif échouant systématiquement.
+      journal.enregistrer(
+          JournalAudit.EcritureAudit.echec(
+              session.getPhoneNumber(),
+              EvenementAudit.VIVACITE_ECHOUEE,
+              session.identifiantActeur(),
+              TypeActeur.CLIENT,
+              "Action de vivacité « "
+                  + action
+                  + " » non réalisée ("
+                  + verification.completedActions().size()
+                  + " action(s) déjà validée(s))"));
+    }
 
     return ChallengeVerifyResponse.builder()
         .sessionId(verification.sessionId())
