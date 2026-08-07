@@ -25,8 +25,13 @@ if [ -n "$front" ]; then
     # Les chemins sont relatifs à la racine du dépôt, ESLint tourne depuis
     # frontend/ : on retire le préfixe.
     fichiers=$(echo "$front" | sed 's|^frontend/||')
+    # `node` sur le point d'entrée, et non `npx`. Sous Windows, npx est un
+    # script .cmd qui rappelle node par un chemin entre guillemets ; invoqué
+    # depuis un shell POSIX, comme le sont les crochets git, il échoue sur
+    # « '"node"' n'est pas reconnu » dès que ce chemin contient un espace,
+    # ce qui est le cas de « C:\Program Files\nodejs » par défaut.
     # shellcheck disable=SC2086
-    (cd "$racine/frontend" && npx --no-install eslint $fichiers) || echec=1
+    (cd "$racine/frontend" && node node_modules/eslint/bin/eslint.js $fichiers) || echec=1
   else
     # Ne pas bloquer un développeur qui n'a pas installé le frontend, mais ne
     # pas laisser croire non plus que le contrôle a eu lieu.

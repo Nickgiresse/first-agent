@@ -22,7 +22,27 @@ module.exports = tseslint.config(
     ignores: ['dist/**', 'node_modules/**', '.angular/**', 'coverage/**'],
   },
   {
-    files: ['**/*.ts'],
+    // Fichiers de configuration à la racine du projet.
+    //
+    // Ils n'appartiennent à aucun tsconfig, et c'est normal : ils ne sont pas
+    // compilés dans l'application. L'analyse typée ne peut donc pas les lire et
+    // échoue avec « not found by the project service ». Les écarter du typage
+    // plutôt que les forcer dans un tsconfig évite de faire entrer de
+    // l'outillage dans le périmètre de compilation de l'application.
+    files: ['*.config.ts', '*.config.js'],
+    extends: [eslint.configs.recommended, ...tseslint.configs.recommended],
+    languageOptions: {
+      parserOptions: { projectService: false },
+    },
+    rules: {
+      // Ce fichier même est chargé par ESLint avant tout transpileur : il doit
+      // rester en CommonJS. La règle vise les sources de l'application, où
+      // `require` trahirait un module qui n'a pas suivi la migration.
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.recommended,

@@ -68,4 +68,57 @@ describe('AccountNumberInput', () => {
 
     expect(component.rawDigits).toBe('1000500001');
   });
+
+  describe('formatage du RIB', () => {
+    // Le RIB Afriland se lit en quatre blocs : code banque, code guichet,
+    // numéro de compte, clé. Ce composant saisit les trois derniers, le code
+    // banque étant affiché à côté et non modifiable. Un regroupement erroné
+    // ferait relire un numéro pour un autre au moment de la vérification.
+
+    it('groupe en 5, 11 puis 2 chiffres', () => {
+      expect(component.format('00001000000758278 1'.replace(/\D/g, ''))).toBe(
+        '00001 00000075827 81',
+      );
+    });
+
+    it('ne groupe que ce qui est saisi, sans combler', () => {
+      expect(component.format('')).toBe('');
+      expect(component.format('1')).toBe('1');
+      expect(component.format('00001')).toBe('00001');
+      expect(component.format('000012')).toBe('00001 2');
+    });
+
+    it('ignore tout ce qui n\'est pas un chiffre', () => {
+      expect(component.format('00001 abc 00000075827-81')).toBe('00001 00000075827 81');
+    });
+
+    it('ne dépasse jamais 18 chiffres', () => {
+      // Au-delà, la saisie déborderait sur des positions qui n'existent pas
+      // dans un RIB : la troncature est une protection, pas un confort.
+      const trop = '9'.repeat(30);
+
+      expect(component.format(trop).replace(/\D/g, '')).toHaveLength(18);
+    });
+
+    it('conserve les zéros de tête, qui portent du sens', () => {
+      // Un code guichet « 00001 » n'est pas « 1 ». Toute conversion numérique
+      // intermédiaire les perdrait.
+      expect(component.format('00001000000758278')).toMatch(/^00001 /);
+    });
+  });
+
+  describe('valeur émise vers le formulaire', () => {
+    it('transmet les chiffres bruts, sans les séparateurs affichés', () => {
+      let recu: string | null = null;
+      component.registerOnChange(v => (recu = v));
+
+      const champ = input();
+      champ.value = '00001 00000075827 81';
+      champ.dispatchEvent(new Event('input'));
+
+      // Le formatage est un confort de lecture ; ce qui part vers le backend
+      // ne doit contenir que des chiffres.
+      expect(recu).toBe('000010000007582781');
+    });
+  });
 });
