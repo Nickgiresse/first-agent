@@ -1,0 +1,56 @@
+#!/bin/sh
+#
+# Contrôle avant commit (charte frontend §7.1).
+#
+# Écrit en shell POSIX et sans dépendance, délibérément. Ce dépôt porte trois
+# stacks : un backend Java, un frontend Angular et un service Python. Un crochet
+# installé par `npm install` ne serait posé que chez ceux qui travaillent sur le
+# frontend, et un développeur Java pousserait sans aucun contrôle.
+#
+# Chaque contrôle est conditionné à la présence de fichiers concernés dans le
+# commit : un commit de documentation ne déclenche rien et reste instantané.
+
+set -e
+
+racine=$(git rev-parse --show-toplevel)
+indexes=$(git diff --cached --name-only --diff-filter=ACMR)
+
+echec=0
+
+# ── Frontend ────────────────────────────────────────────────
+front=$(echo "$indexes" | grep -E '^frontend/.*\.(ts|html)$' || true)
+if [ -n "$front" ]; then
+  if [ -d "$racine/frontend/node_modules/eslint" ]; then
+    echo "[pre-commit] ESLint sur les fichiers indexés"
+    # Les chemins sont relatifs à la racine du dépôt, ESLint tourne depuis
+    # frontend/ : on retire le préfixe.
+    fichiers=$(echo "$front" | sed 's|^frontend/||')
+    # shellcheck disable=SC2086
+    (cd "$racine/frontend" && npx --no-install eslint $fichiers) || echec=1
+  else
+    # Ne pas bloquer un développeur qui n'a pas installé le frontend, mais ne
+    # pas laisser croire non plus que le contrôle a eu lieu.
+    echo "[pre-commit] frontend/node_modules absent : ESLint non exécuté"
+  fi
+fi
+
+# ── Backend ─────────────────────────────────────────────────
+back=$(echo "$indexes" | grep -E '^backend/.*\.java$' || true)
+if [ -n "$back" ]; then
+  echo "[pre-commit] Contrôle du formatage Java"
+  # Spotless seul, pas la compilation : un crochet qui prend deux minutes est
+  # un crochet que l'on finit par contourner avec --no-verify.
+  (cd "$racine/backend" && ./mvnw -q -o spotless:check) || {
+    echo "[pre-commit] Formatage non conforme. Corrigez avec :"
+    echo "             cd backend && ./mvnw spotless:apply"
+    echec=1
+  }
+fi
+
+if [ "$echec" -ne 0 ]; then
+  echo ""
+  echo "[pre-commit] Commit interrompu."
+  exit 1
+fi
+
+exit 0

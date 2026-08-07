@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Contrôle du message de commit (charte frontend §23.2).
+#
+# La charte impose la convention Conventional Commits et son contrôle
+# automatique. Le relevé de conformité constatait 10 messages conformes sur les
+# 20 derniers, sans aucun contrôle : c'est ce que ce crochet corrige.
+#
+# La convention n'est pas une coquetterie. Elle permet de dériver un journal des
+# modifications, de repérer une rupture de compatibilité, et de retrouver quand
+# un comportement a changé sans relire chaque diff.
+
+message=$(head -n 1 "$1")
+
+# Un commit de fusion ou de reprise porte un message imposé par git.
+case "$message" in
+  "Merge "*|"Revert "*|"fixup!"*|"squash!"*)
+    exit 0
+    ;;
+esac
+
+# type(portée facultative)!: description
+#
+# Le `!` marque une rupture de compatibilité. La portée est libre : imposer une
+# liste fermée obligerait à modifier ce crochet à chaque nouveau module.
+motif='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .{1,}'
+
+if ! echo "$message" | grep -Eq "$motif"; then
+  cat >&2 <<'FIN'
+
+[commit-msg] Message non conforme à la convention Conventional Commits.
+
+  Forme attendue :  type(portée): description
+  Exemples       :  feat(kyc): croisement du nom avec le core banking
+                    fix(audit): le verrou anti-force-brute ne se déclenchait pas
+                    docs: relevé de conformité aux chartes DSI
+
+  Types admis : feat, fix, docs, style, refactor, perf, test, build, ci,
+                chore, revert
+
+  Un « ! » avant les deux-points signale une rupture de compatibilité.
+
+FIN
+  exit 1
+fi
+
+# 72 caractères : au-delà, `git log --oneline` et l'affichage des plateformes
+# tronquent, et la fin du message n'est plus lue par personne.
+longueur=$(printf '%s' "$message" | wc -c)
+if [ "$longueur" -gt 72 ]; then
+  echo "" >&2
+  echo "[commit-msg] Première ligne trop longue ($longueur caractères, 72 au plus)." >&2
+  echo "             Le détail a sa place dans le corps du message, après une ligne vide." >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0
