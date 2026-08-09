@@ -18,7 +18,12 @@
         <h1>{{ lang.t('Vous avez créé votre compte !', 'Your account has been created!') }}</h1>
         <p>{{ lang.t('Votre inscription est terminée. Vous pouvez maintenant poursuivre vos échanges via WhatsApp.',
             'Your registration is complete. You can now continue the conversation on WhatsApp.') }}</p>
-        <a class="primary-button" [href]="whatsappUrl" target="_blank" rel="noopener">{{ lang.t('Retour au chat
-            WhatsApp', 'Back to WhatsApp chat') }}</a>
+        @if (lienRetourDisponible) {
+            <a class="primary-button" [href]="whatsappUrl" target="_blank" rel="noopener">{{ lang.t('Retour au chat
+                WhatsApp', 'Back to WhatsApp chat') }}</a>
+        } @else {
+            <p class="retour-indisponible">{{ lang.t('Reprenez simplement la conversation depuis WhatsApp.',
+                'Simply resume the conversation from WhatsApp.') }}</p>
+        }
     </section>
 </main>

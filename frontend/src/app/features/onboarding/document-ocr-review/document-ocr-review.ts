@@ -49,6 +49,17 @@ export class DocumentOcrReview implements OnInit {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
+  /**
+   * Aucune extraction n'a pu être relue.
+   *
+   * <p>Distinct de `error`, qui signale aussi les échecs de confirmation. Cet
+   * état-ci interdit toute soumission : le formulaire n'a pas de données à
+   * corriger, et ses règles de validation dépendent d'un type de document
+   * qu'on ignore. Confirmer reviendrait à déclarer une identité que rien
+   * n'atteste.
+   */
+  readonly extractionIndisponible = signal(false);
+
   ngOnInit(): void {
     this.docs.getOcrData().subscribe({
       next: response => {
@@ -89,17 +100,43 @@ export class DocumentOcrReview implements OnInit {
       error: error => {
         this.error.set(errorMessage(error, 'Impossible de récupérer les données extraites.'));
         this.loading.set(false);
+        // Le formulaire est condamné tant qu'aucune extraction n'a été relue.
+        //
+        // Sans cela, l'échec laissait un formulaire vide mais modifiable, et
+        // surtout dépourvu des validateurs propres au type de pièce : ceux-ci
+        // ne sont posés que dans le cas de succès, une fois le type connu.
+        // Seuls le prénom et le nom restaient exigés. Le client pouvait donc
+        // saisir l'identité de son choix et la confirmer alors qu'aucun
+        // document n'avait été lu, et le back-office recevait un dossier qu'il
+        // croyait issu d'une extraction OCR.
+        this.extractionIndisponible.set(true);
       }
     });
   }
 
   submit(): void {
-    if (this.form.invalid) return;
+    // Rien à confirmer si aucune extraction n'a été relue : les règles de
+    // validation dépendent d'un type de document qu'on ignore alors.
+    if (this.extractionIndisponible() || this.submitting()) {
+      return;
+    }
+    if (this.form.invalid) {
+      // Sans ceci, le bouton restait inerte au milieu de treize champs, sans
+      // indiquer lequel manquait : le client ne pouvait que chercher.
+      this.form.markAllAsTouched();
+      this.error.set('Complétez les champs obligatoires avant de confirmer.');
+      return;
+    }
 
     this.submitting.set(true);
     this.error.set(null);
     this.docs.confirmOcrData(this.form.getRawValue()).subscribe({
-      next: () => this.navigation.navigateTo('/onboarding/liveness-challenge'),
+      next: () => {
+        // Libéré avant la navigation : celle-ci peut être refusée, et le
+        // client resterait sinon devant un bouton définitivement inerte.
+        this.submitting.set(false);
+        this.navigation.navigateTo('/onboarding/liveness-challenge');
+      },
       error: error => {
         this.error.set(errorMessage(error, 'Impossible de confirmer ces informations.'));
         this.submitting.set(false);

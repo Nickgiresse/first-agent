@@ -35,16 +35,32 @@ export class LanguageService {
     this.set(this.lang() === 'fr' ? 'en' : 'fr');
   }
 
-  /** Applique la langue transmise par le lien d'onboarding, si elle est exploitable. */
+  /**
+   * Applique la langue transmise par le lien d'onboarding, si elle est exploitable.
+   *
+   * La valeur est normalisée avant comparaison, comme l'est déjà celle du
+   * navigateur : le lien est fabriqué par le bot WhatsApp, et rien ne garantit
+   * qu'il envoie exactement {@code en}. Une comparaison stricte rejetait
+   * {@code EN} comme {@code en-US}, et le client anglophone qui venait
+   * précisément d'écrire en anglais au bot arrivait sur un parcours en
+   * français.
+   */
   applyFromLink(lang: string | null | undefined): void {
-    if (lang === 'fr' || lang === 'en') {
-      this.set(lang);
+    const normalisee = lang?.toLowerCase().split('-')[0];
+    if (normalisee === 'fr' || normalisee === 'en') {
+      this.set(normalisee);
     }
   }
 
-  /** Traduction ponctuelle : t('Texte français', 'English text'). */
+  /**
+   * Traduction ponctuelle : t('Texte français', 'English text').
+   *
+   * Le français sert de repli quand la traduction anglaise manque. Un écran en
+   * partie français est dégradé mais reste utilisable ; une chaîne vide donne
+   * un bouton sans texte, sur lequel le client ne peut que deviner.
+   */
   t(fr: string, en: string): string {
-    return this.lang() === 'en' ? en : fr;
+    return this.lang() === 'en' ? en || fr : fr;
   }
 
   private resolveInitial(): Lang {

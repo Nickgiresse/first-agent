@@ -27,6 +27,20 @@ export class Success {
   private readonly state = inject(OnboardingState);
   readonly whatsappUrl = environment.whatsappUrl;
 
+  /**
+   * Le lien de retour vers le bot est-il exploitable ?
+   *
+   * <p>`environment.prod.ts` porte encore `https://wa.me/`, sans numéro, en
+   * attente de l'adresse définitive du service client. Tel quel, le seul bouton
+   * de cet écran final mène à une page d'erreur WhatsApp, pour la totalité des
+   * clients et au moment précis où le parcours vient d'aboutir.
+   *
+   * <p>Le lien est donc masqué tant que l'adresse est incomplète. Un écran de
+   * réussite sans bouton de retour est décevant ; un bouton qui mène à une
+   * erreur laisse croire que l'inscription a échoué.
+   */
+  readonly lienRetourDisponible = /wa\.me\/\d{6,}/.test(environment.whatsappUrl ?? '');
+
   constructor() {
     // Onboarding terminé : on purge l'état local, notamment le PIN et le token du lien
     // (déjà consommé côté banque) — ils ne doivent pas survivre au parcours.

@@ -244,19 +244,32 @@ describe('LanguageService', () => {
       expect(document.documentElement.lang).not.toBe('es');
     });
 
-    it("n'accepte aujourd'hui qu'un code exactement en minuscules et sans région", () => {
+    it("accepte un code en majuscules ou porteur d'une région", () => {
       const service = creerService();
       service.set('fr');
 
       service.applyFromLink('EN');
+
+      // Le lien est fabriqué par le bot WhatsApp : rien ne garantit qu'il
+      // envoie exactement « en ». Une comparaison stricte renvoyait en français
+      // le client anglophone qui venait précisément d'écrire en anglais au bot.
+      expect(service.current()).toBe('en');
+
+      service.set('fr');
       service.applyFromLink('en-US');
 
-      // COMPORTEMENT ACTUEL, PAS SOUHAITABLE : la comparaison est stricte, donc
-      // un lien portant `EN` ou `en-US` retombe silencieusement en français.
-      // Ce qu'il faudrait : normaliser (minuscules, préfixe avant le tiret)
-      // avant de comparer, comme le fait déjà la lecture de navigator.language.
-      // Ce cas fige la limite pour qu'un élargissement futur soit un choix
-      // visible et non un effet de bord.
+      expect(service.current()).toBe('en');
+    });
+
+    it('ignore toujours un code de langue non pris en charge', () => {
+      const service = creerService();
+      service.set('fr');
+
+      // La normalisation élargit les formes acceptées, elle n'ouvre pas la
+      // porte à des langues que le parcours ne sait pas afficher.
+      service.applyFromLink('de-DE');
+      service.applyFromLink('ES');
+
       expect(service.current()).toBe('fr');
     });
   });
@@ -285,16 +298,14 @@ describe('LanguageService', () => {
       expect(service.t('Continuer', 'Continue')).toBe('Continue');
     });
 
-    it('rend une chaîne vide quand la traduction anglaise manque', () => {
+    it('retombe sur le français quand la traduction anglaise manque', () => {
       const service = creerService();
       service.set('en');
 
-      // COMPORTEMENT ACTUEL, PAS SOUHAITABLE : une traduction laissée vide
-      // produit un libellé vide à l'écran, donc un bouton sans texte, plutôt
-      // que le texte français en repli. Le repli sur le français serait
-      // dégradé mais utilisable ; une chaîne vide ne l'est pas.
-      // Ce qu'il faudrait : `return this.lang() === 'en' ? (en || fr) : fr;`
-      expect(service.t('Continuer', '')).toBe('');
+      // Une traduction oubliée donnait un libellé vide, donc un bouton sans
+      // texte sur lequel le client ne pouvait que deviner. Un écran en partie
+      // français est dégradé mais reste utilisable.
+      expect(service.t('Continuer', '')).toBe('Continuer');
     });
   });
 });

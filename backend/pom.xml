@@ -172,6 +172,16 @@
 					  exigés par la charte §11 : le laisser en place pendant que
 					  la couverture progresse reviendrait à s'en accommoder.
 
+					  ATTENTION : le seuil s'applique PAR MODULE et non sur
+					  l'agrégat. Il vaut donc ce que franchit le module le plus
+					  faible, et le caler sur l'agrégat casse le build.
+
+					  Au 07/08/2026 l'ensemble est à 48,8 %, mais boot n'est qu'à
+					  37 % : ce module ne contient que la classe de démarrage et
+					  la configuration, que les tests traversent sans les
+					  exercer. Le cliquet reste donc à 35 %, et il ne montera
+					  qu'en couvrant boot, pas en couvrant le métier.
+
 					  Historique des relèvements :
 					    06/08/2026  34 % mesurés sur 4 383 instructions  -> 30 %
 					    06/08/2026  39,6 % sur 6 123 instructions        -> 35 %
