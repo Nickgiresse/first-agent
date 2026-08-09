@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { DocumentService } from './document';
+import { SessionAbsenteError } from '../errors/session-absente.error';
 import { OnboardingState } from './onboarding-state';
 import { environment } from '../../../environments/environment';
 import { OcrConfirmationRequest } from '../models/ocr.model';
@@ -152,21 +153,21 @@ describe('DocumentService', () => {
       seconde.flush({});
     });
 
-    it('part vide plutôt que absent quand aucune session n\'est ouverte', () => {
+    it('ne part pas du tout quand aucune session n\'est ouverte', () => {
       etat.clear();
 
-      service.getOcrData().subscribe();
-      const requete = httpMock.expectOne(`${BASE}/ocr`);
+      // L'appel partait auparavant avec un en-tête vide, et c'est le serveur
+      // qui refusait : le client attendait un aller-retour réseau pour un 401
+      // générique, et rien ne disait que la session manquait côté navigateur.
+      let recue: unknown = null;
 
-      // COMPORTEMENT ACTUEL, DOCUMENTÉ : l'appel part quand même, avec un
-      // en-tête vide, et c'est le serveur qui refuse. Le garde de route est
-      // censé rendre ce cas impossible ; s'il tombait, l'appel produirait un
-      // 401 et non une erreur locale immédiate. Ce cas fige la valeur envoyée
-      // pour que le backend puisse s'y fier plutôt que de gérer aussi
-      // l'absence d'en-tête.
-      expect(requete.request.headers.get('X-Session-Token')).toBe('');
+      service.getOcrData().subscribe({ error: e => (recue = e) });
 
-      requete.flush({});
+      // Aucune requête n'est émise, et l'erreur arrive par le flux : c'est ce
+      // que `defer` garantit. Levée de façon synchrone, elle traverserait
+      // l'appelant sans qu'aucun de ses gestionnaires ne l'attrape.
+      httpMock.expectNone(`${BASE}/ocr`);
+      expect(recue).toBeInstanceOf(SessionAbsenteError);
     });
   });
 
