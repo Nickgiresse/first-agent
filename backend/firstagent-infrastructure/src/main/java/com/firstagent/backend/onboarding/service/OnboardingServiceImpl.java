@@ -4,6 +4,7 @@ import com.firstagent.backend.audit.model.EvenementAudit;
 import com.firstagent.backend.audit.model.TypeActeur;
 import com.firstagent.backend.audit.port.JournalAudit;
 import com.firstagent.backend.common.enums.CustomerStatus;
+import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.enums.LivenessStatus;
 import com.firstagent.backend.common.enums.OcrStatus;
@@ -26,6 +27,7 @@ import com.firstagent.backend.document.repository.StagingOcrResultRepository;
 import com.firstagent.backend.document.service.DocumentService;
 import com.firstagent.backend.document.service.FaceVerificationService;
 import com.firstagent.backend.document.service.OcrService;
+import com.firstagent.backend.document.service.StorageService;
 import com.firstagent.backend.liveness.entity.LivenessResult;
 import com.firstagent.backend.liveness.entity.StagingLivenessResult;
 import com.firstagent.backend.liveness.repository.LivenessResultRepository;
@@ -91,6 +93,7 @@ public class OnboardingServiceImpl implements OnboardingService {
   private final FaceVerificationService faceVerificationService;
   private final LivenessService livenessService;
   private final WhatsAppBankingClient whatsAppBankingClient;
+  private final StorageService storageService;
 
   private final StagingDocumentRepository stagingDocumentRepository;
   private final StagingOcrResultRepository stagingOcrResultRepository;
@@ -381,7 +384,7 @@ public class OnboardingServiceImpl implements OnboardingService {
     // fail-secure — si l'écriture dans la source de vérité échoue, la transaction (@Transactional)
     // est annulée, rien n'est enregistré localement et le staging reste intact pour un nouvel
     // essai.
-    pushToWhatsAppBanking(session, customer, stagingOcr, stagingFace, request);
+    pushToWhatsAppBanking(session, customer, stagingOcr, stagingFace, request, stagingDocuments);
 
     customerRepository.save(customer);
 
@@ -476,7 +479,8 @@ public class OnboardingServiceImpl implements OnboardingService {
       Customer customer,
       StagingOcrResult stagingOcr,
       StagingFaceVerificationResult stagingFace,
-      CompleteOnboardingRequest request) {
+      CompleteOnboardingRequest request,
+      List<StagingDocument> stagingDocuments) {
     if (request == null
         || request.getLinkToken() == null
         || request.getLinkToken().isBlank()
@@ -506,6 +510,41 @@ public class OnboardingServiceImpl implements OnboardingService {
         null);
     log.info(
         "Client poussé vers le WhatsApp banking (décision={}, compte={})", decision, accountNumber);
+
+    // Les pièces suivent le client : la revue conseiller du back-office doit pouvoir afficher
+    // recto/verso/selfie d'un onboarding externe comme ceux du parcours interne. On lit le
+    // staging AVANT sa purge. Un échec ici ne remet pas en cause l'inscription déjà validée.
+    try {
+      whatsAppBankingClient.archiveDocuments(
+          request.getLinkToken(),
+          decision,
+          docType,
+          readStaged(stagingDocuments, DocumentType.CNI_RECTO),
+          readStaged(stagingDocuments, DocumentType.CNI_VERSO),
+          readStaged(stagingDocuments, DocumentType.SELFIE));
+      log.info("Dossier ({} pièces) archivé dans le back-office", stagingDocuments.size());
+    } catch (RuntimeException e) {
+      log.error(
+          "Archivage du dossier dans le back-office échoué (client créé malgré tout) : {}",
+          e.getMessage());
+    }
+  }
+
+  /** Relit une pièce du staging depuis le stockage ; tableau vide si absente ou illisible. */
+  private byte[] readStaged(List<StagingDocument> documents, DocumentType type) {
+    return documents.stream()
+        .filter(d -> d.getDocumentType() == type)
+        .findFirst()
+        .map(
+            d -> {
+              try {
+                return storageService.read(d.getFilePath());
+              } catch (RuntimeException e) {
+                log.warn("Pièce {} illisible : {}", type, e.getMessage());
+                return new byte[0];
+              }
+            })
+        .orElse(new byte[0]);
   }
 
   /**

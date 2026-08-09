@@ -56,6 +56,12 @@
                 }
                 @case ('ERROR') {
                     <span class="form-error">{{ error() }}</span>
+                    <!-- La phase ERROR n'offrait qu'un message : le client qui
+                         refusait l'accès à la caméra par erreur, ou dont le
+                         défi n'avait pas démarré, restait sans aucune issue et
+                         devait deviner qu'il fallait recharger la page. -->
+                    <button class="primary-button" type="button" (click)="restartChallenge()">{{
+                        lang.t('Reprendre la vérification', 'Restart the check') }}</button>
                 }
             }
 

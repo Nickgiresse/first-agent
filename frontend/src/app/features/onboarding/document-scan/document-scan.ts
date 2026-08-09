@@ -16,6 +16,10 @@ const STABILITY_TICKS_REQUIRED = 3;
 const ANALYSIS_WIDTH = 200;
 const ANALYSIS_HEIGHT = 150;
 
+// Consigne de depart, reutilisee a chaque retour au recto : elle etait
+// ecrite en trois endroits, et l'un d'eux l'oubliait.
+const CONSIGNE_RECTO = 'Positionnez le recto de votre CNI dans le cadre.';
+
 @Component({
   selector: 'afb-document-scan',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,7 +40,7 @@ export class DocumentScan {
   readonly analysisCanvasRef = viewChild<ElementRef<HTMLCanvasElement>>('analysisCanvas');
 
   readonly step = signal<CaptureStep>('FRONT');
-  readonly feedbackMessage = signal('Positionnez le recto de votre CNI dans le cadre.');
+  readonly feedbackMessage = signal(CONSIGNE_RECTO);
   readonly cameraError = this.camera.error;
   readonly error = signal<string | null>(null);
 
@@ -143,7 +147,14 @@ export class DocumentScan {
 
   private upload(): void {
     if (!this.frontBlob || !this.backBlob) {
-      this.error.set('Votre session a expiré. Recommencez la vérification du compte.');
+      // Le message annonçait une session expirée et renvoyait le client à la
+      // vérification de son compte, alors que seule une prise de vue s'est
+      // perdue et que la session est parfaitement valide. Il repartait donc
+      // refaire une étape déjà franchie, sans raison.
+      this.error.set('Une des deux prises de vue s’est perdue. Reprenez le recto.');
+      this.step.set('FRONT');
+      this.frontBlob = null;
+      this.backBlob = null;
       return;
     }
     this.pauseCapture();
@@ -164,7 +175,16 @@ export class DocumentScan {
 
   private extract(): void {
     this.docs.extractOcrData().subscribe({
-      next: () => this.navigation.navigateTo('/onboarding/document-ocr-review'),
+      next: () => {
+        // L'étape revient à son point de départ AVANT de naviguer. La laisser
+        // sur « UPLOADING » ne se voyait pas tant que la navigation aboutissait,
+        // mais `NavigationService` avale les échecs : un garde qui refuse
+        // laissait le client devant « Analyse des documents en cours… », caméra
+        // fermée, sans cadre, sans erreur et sans aucune action possible.
+        this.step.set('FRONT');
+        this.feedbackMessage.set(CONSIGNE_RECTO);
+        this.navigation.navigateTo('/onboarding/document-ocr-review');
+      },
       error: e => this.fail(e)
     });
   }
@@ -172,6 +192,10 @@ export class DocumentScan {
   private fail(e: unknown): void {
     this.error.set(errorMessage(e, 'Le traitement du document a échoué.'));
     this.step.set('FRONT');
+    // Sans cette remise à zéro, l'écran revenait au recto en affichant encore
+    // « Analyse des documents en cours… ». Le libellé n'était corrigé qu'à la
+    // première image analysée, donc jamais si la caméra ne se rouvrait pas.
+    this.feedbackMessage.set(CONSIGNE_RECTO);
     this.frontBlob = null;
     this.backBlob = null;
     void this.initCamera();

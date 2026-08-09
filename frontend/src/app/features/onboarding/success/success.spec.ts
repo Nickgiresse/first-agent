@@ -124,20 +124,28 @@ describe('Success', () => {
       return fixture;
     }
 
-    it("lienDeRetour_sansNumeroConfigure_nEstPasAffiche", () => {
-      // `whatsappUrl` vaut encore « https://wa.me/ », sans numéro, dans les
-      // deux environnements. Tel quel, WhatsApp affiche une page d'erreur : le
-      // seul bouton de l'écran de réussite menait donc nulle part, pour 100 %
-      // des clients et au moment précis où le parcours vient d'aboutir.
-      //
-      // Un écran sans bouton de retour est décevant ; un bouton qui mène à une
-      // erreur laisse croire que l'inscription a échoué.
+    it("lienDeRetour_avecNumeroConfigure_ramèneVersLeServiceClient", () => {
+      // `whatsappUrl` a longtemps valu « https://wa.me/ », sans numéro : le
+      // seul bouton de l'écran de réussite menait alors à une page d'erreur
+      // WhatsApp, pour 100 % des clients et au moment précis où le parcours
+      // vient d'aboutir. Le numéro du service client est désormais configuré.
       const fixture = rendre();
+      const lien: HTMLAnchorElement = fixture.nativeElement.querySelector('a.primary-button');
 
-      expect(fixture.componentInstance.lienRetourDisponible).toBe(false);
-      expect(fixture.nativeElement.querySelector('a.primary-button')).toBeNull();
-      // Le client n'est pas laissé sans indication pour autant.
-      expect(fixture.nativeElement.textContent).toContain('WhatsApp');
+      expect(fixture.componentInstance.lienRetourDisponible).toBe(true);
+      expect(lien).not.toBeNull();
+      expect(lien.getAttribute('href')).toMatch(/wa\.me\/\d{6,}/);
+    });
+
+    it("lienDeRetour_nOuvreAucunAccesSurLOngletDuParcours", () => {
+      // L'onglet ouvert par un lien externe garde sinon une référence sur celui
+      // du parcours et peut le rediriger. Sur le dernier écran d'un parcours
+      // bancaire, c'est un point de départ tout trouvé pour une page qui
+      // imiterait la banque et redemanderait le code PIN.
+      const lien: HTMLAnchorElement = rendre().nativeElement.querySelector('a.primary-button');
+
+      expect(lien.target).toBe('_blank');
+      expect(lien.rel).toContain('noopener');
     });
 
     it("lienDeRetour_reconnaitUnNumeroValide", () => {
@@ -151,13 +159,6 @@ describe('Success', () => {
       expect(avecNumero.test('https://wa.me/abc')).toBe(false);
     });
 
-    // NON TESTÉ, ET DÉLIBÉRÉMENT : le lien porte `target="_blank"` et
-    // `rel="noopener"`, sans quoi l'onglet ouvert garderait une référence sur
-    // celui du parcours et pourrait le rediriger vers une page imitant la
-    // banque. Cette garantie n'est vérifiable qu'une fois le lien rendu, ce qui
-    // suppose un numéro configuré ; `whatsappUrl` étant une constante de
-    // compilation, l'environnement ne se substitue pas depuis un test. Le jour
-    // où le numéro sera renseigné, un cas devra le vérifier ici.
   });
 
   describe('confettis', () => {

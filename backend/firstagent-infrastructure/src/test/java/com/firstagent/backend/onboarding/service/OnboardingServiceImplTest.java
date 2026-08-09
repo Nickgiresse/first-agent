@@ -34,6 +34,7 @@ import com.firstagent.backend.document.repository.StagingOcrResultRepository;
 import com.firstagent.backend.document.service.DocumentService;
 import com.firstagent.backend.document.service.FaceVerificationService;
 import com.firstagent.backend.document.service.OcrService;
+import com.firstagent.backend.document.service.StorageService;
 import com.firstagent.backend.liveness.entity.LivenessResult;
 import com.firstagent.backend.liveness.entity.StagingLivenessResult;
 import com.firstagent.backend.liveness.repository.LivenessResultRepository;
@@ -78,6 +79,7 @@ class OnboardingServiceImplTest {
   @Mock private FaceVerificationService faceVerificationService;
   @Mock private LivenessService livenessService;
   @Mock private WhatsAppBankingClient whatsAppBankingClient;
+  @Mock private StorageService storageService;
   @Mock private StagingDocumentRepository stagingDocumentRepository;
   @Mock private StagingOcrResultRepository stagingOcrResultRepository;
   @Mock private StagingFaceVerificationResultRepository stagingFaceVerificationResultRepository;
@@ -108,6 +110,7 @@ class OnboardingServiceImplTest {
             faceVerificationService,
             livenessService,
             whatsAppBankingClient,
+            storageService,
             stagingDocumentRepository,
             stagingOcrResultRepository,
             stagingFaceVerificationResultRepository,

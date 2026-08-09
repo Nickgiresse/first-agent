@@ -152,29 +152,26 @@ describe('LivenessChallenge', () => {
       const fixture = await ouvrirLEcran();
 
       expect(startLivenessChallenge).not.toHaveBeenCalled();
-      expect(fixture.componentInstance.phase()).toBe('LOADING');
+      // La phase d'erreur, et non « LOADING » : elle porte un message et un
+      // bouton, là où l'écran restait autrement figé sur « Préparation ».
+      expect(fixture.componentInstance.phase()).toBe('ERROR');
     });
 
-    it("demarrage_cameraRefusee_laisseLEcranSansAucuneIssue", async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // `init()` sort en silence quand la caméra n'a pas démarré : la phase
-      // reste `LOADING`, le gabarit continue d'afficher « Préparation de la
-      // caméra… » sous le message d'autorisation, et aucun bouton ne permet de
-      // relancer. Le client qui vient d'accorder l'autorisation dans la barre du
-      // navigateur n'a d'autre choix que de recharger la page, ce que rien ne
-      // lui indique.
-      //
-      // CE QUI DEVRAIT ÊTRE : une phase d'erreur explicite assortie d'un bouton
-      // de nouvelle tentative, qui rappelle `init()`.
+    it("demarrage_cameraRefusee_offreUneReprise", async () => {
+      // `init()` sortait en silence quand la caméra n'avait pas démarré : la
+      // phase restait `LOADING`, l'écran affichait « Préparation de la caméra… »
+      // indéfiniment, et aucun bouton ne permettait de relancer. Le client qui
+      // venait d'accorder l'autorisation dans la barre du navigateur n'avait
+      // d'autre choix que de recharger la page, ce que rien ne lui indiquait.
       start.mockResolvedValue(null);
       cameraError.set('Impossible d’accéder à la caméra.');
 
       const fixture = await ouvrirLEcran();
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.phase()).toBe('LOADING');
-      expect(fixture.nativeElement.querySelector('.primary-button')).toBeNull();
+      expect(fixture.componentInstance.phase()).toBe('ERROR');
+      expect(fixture.componentInstance.error()).toContain('caméra');
+      expect(fixture.nativeElement.querySelector('.primary-button')).not.toBeNull();
     });
 
     it('demarrage_defiIndisponible_afficheLeMessageMetier', async () => {
@@ -185,31 +182,34 @@ describe('LivenessChallenge', () => {
       const fixture = await ouvrirLEcran();
 
       expect(fixture.componentInstance.error()).toBe('Session expirée, reprenez le parcours.');
-      expect(fixture.componentInstance.phase()).toBe('RETRY');
+      // ERROR et non RETRY : aucune action n'ayant été reçue, il n'y a rien à
+      // « réessayer » action par action. C'est toute la vérification qui doit
+      // être reprise.
+      expect(fixture.componentInstance.phase()).toBe('ERROR');
     });
 
-    it("demarrage_defiIndisponible_leBoutonReessayerNeFigePlusLEcran", async () => {
-      // L'échec du démarrage retombe sur la même phase `RETRY` que l'échec
+    it("demarrage_defiIndisponible_offreUneRepriseQuiRejoueLeDemarrage", async () => {
+      // L'échec du démarrage retombait sur la même phase `RETRY` que l'échec
       // d'une action, alors que les deux situations n'ont rien de commun : ici
       // aucune action n'a été reçue. « Réessayer » repassait donc en `READY`,
       // puis « Commencer » basculait en `CAPTURING` et la capture ressortait
       // aussitôt faute d'action courante : l'écran restait figé sur « Capture
-      // en cours », sans image, sans appel, et cette fois sans même le message
-      // d'erreur.
-      //
-      // La garde de `startCapture()` referme ce chemin. Reste que le bouton
-      // « Réessayer » ne rejoue pas le démarrage du défi : c'est le défaut
-      // suivant à traiter, verrouillé ici par le nombre d'appels.
+      // en cours », sans image, sans appel, et sans même le message d'erreur.
       startLivenessChallenge.mockReturnValue(throwError(() => ({ error: { message: 'Service indisponible' } })));
       const fixture = await ouvrirLEcran();
 
-      fixture.componentInstance.retryCurrentAction();
-      fixture.componentInstance.startCapture();
-      await laisserLaCaptureSeDerouler();
+      expect(fixture.componentInstance.phase()).toBe('ERROR');
 
-      // L'écran n'est plus figé sur une capture qui n'a jamais commencé.
+      // La reprise rejoue le démarrage, au lieu de proposer de « réessayer »
+      // une action qui n'existe pas.
+      startLivenessChallenge.mockReturnValue(of({ data: { actions: ['BLINK'] } }));
+      fixture.componentInstance.restartChallenge();
+      // Même avance que l'ouverture de l'écran : la suite tourne sur minuteurs
+      // simulés, et `whenStable` n'y rendrait jamais la main.
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(startLivenessChallenge).toHaveBeenCalledTimes(2);
       expect(fixture.componentInstance.phase()).toBe('READY');
-      expect(startLivenessChallenge).toHaveBeenCalledTimes(1);
       expect(verifyLivenessAction).not.toHaveBeenCalled();
     });
   });
@@ -482,7 +482,7 @@ describe('LivenessChallenge', () => {
       expect(await fichier.text()).toBe('image-1');
     });
 
-    it('finalisation_libereLaCameraAvantLesAppelsReseau', async () => {
+    it('finalisation_libereLaCameraUneFoisLaComparaisonAboutie', async () => {
       // Le témoin lumineux de la caméra reste allumé tant que le flux n'est pas
       // coupé. Le laisser courir pendant l'envoi puis la comparaison faciale,
       // qui peuvent prendre plusieurs secondes, donne au client la très
@@ -492,7 +492,12 @@ describe('LivenessChallenge', () => {
       await terminerLeDefi(fixture);
 
       expect(stop).toHaveBeenCalled();
-      expect(stop.mock.invocationCallOrder[0]).toBeLessThan(uploadDocument.mock.invocationCallOrder[0]);
+      // La caméra est libérée APRÈS la comparaison faciale et non avant les
+      // appels réseau. Coupée trop tôt, « Réessayer » recapturait sur un flux
+      // éteint : aucune image ne sortait et le client tournait en rond.
+      expect(stop.mock.invocationCallOrder[0]).toBeGreaterThan(
+        uploadDocument.mock.invocationCallOrder[0],
+      );
     });
 
     it('finalisation_succes_conduitAuxConditionsGenerales', async () => {
@@ -508,8 +513,12 @@ describe('LivenessChallenge', () => {
       // Reprise de parcours : le selfie de la tentative précédente est déjà en
       // base. Traiter ce refus comme une panne bloquerait définitivement un
       // client qui n'a rien fait de mal, sur un dossier par ailleurs complet.
+      // Le statut 409 est le repère : la formulation, elle, ne l'est plus.
       uploadDocument.mockReturnValue(
-        throwError(() => ({ error: { message: 'Selfie déjà téléversé pour cette session.' } })),
+        throwError(() => ({
+          status: 409,
+          error: { message: 'Selfie déjà téléversé pour cette session.' },
+        })),
       );
       const fixture = await ouvrirLEcran();
 
@@ -519,33 +528,27 @@ describe('LivenessChallenge', () => {
       expect(navigateTo).toHaveBeenCalledWith('/onboarding/terms-conditions');
     });
 
-    it("finalisation_doublonAnnonceAvecUneAutreTournure_bloqueLeParcours", async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
+    it("finalisation_doublonQuelleQueSoitLaTournure_poursuitLeParcours", async () => {
+      // La reprise de parcours était reconnue en cherchant « déjà téléversé »
+      // dans le message du serveur. La tournure française naturelle, « a déjà
+      // été téléversé », intercale un mot et ne correspondait donc plus : le
+      // même incident, annoncé autrement, bloquait le client. Aucun message du
+      // backend ne contenait d'ailleurs plus cette suite de caractères.
       //
-      // La reprise de parcours est reconnue en cherchant la suite de caractères
-      // « déjà téléversé » dans le message du serveur. La tournure française
-      // naturelle, « a déjà été téléversé », intercale un mot et ne correspond
-      // donc plus : le même incident, annoncé autrement, bloque le client.
-      //
-      // Le rapprochement avec le backend aggrave le constat : plus aucun de ses
-      // messages ne contient cette suite de caractères, et l'envoi d'un document
-      // remplace désormais le précédent au lieu de le refuser. Cette branche ne
-      // protège donc plus rien, et le jour où un refus de doublon reviendra,
-      // c'est sa formulation exacte qui décidera du sort du client.
-      //
-      // CE QUI DEVRAIT ÊTRE : la reprise doit se décider sur un code d'erreur
-      // stable renvoyé par le serveur, jamais sur le texte affiché au client,
-      // qui est traduit, reformulé, et relève de l'ergonomie et non du contrat.
+      // Le code de statut est le seul repère stable : 409 dit « existe déjà »,
+      // quelle que soit la formulation et quelle que soit la langue.
       uploadDocument.mockReturnValue(
-        throwError(() => ({ error: { message: 'Un document SELFIE a déjà été téléversé.' } })),
+        throwError(() => ({
+          status: 409,
+          error: { message: 'Le selfie a déjà été téléversé pour cette session.' },
+        })),
       );
       const fixture = await ouvrirLEcran();
 
       await terminerLeDefi(fixture);
 
-      expect(verifyFace).not.toHaveBeenCalled();
-      expect(navigateTo).not.toHaveBeenCalled();
-      expect(fixture.componentInstance.phase()).toBe('RETRY');
+      expect(verifyFace).toHaveBeenCalled();
+      expect(navigateTo).toHaveBeenCalledWith('/onboarding/terms-conditions');
     });
 
     it("finalisation_envoiDuSelfieEnEchec_neFaitPasAvancerLeParcours", async () => {
@@ -573,29 +576,18 @@ describe('LivenessChallenge', () => {
       expect(fixture.componentInstance.phase()).toBe('RETRY');
     });
 
-    it("finalisation_enEchec_proposeUneRepriseSurUneCameraDejaEteinte", async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // `finalize()` coupe la caméra AVANT l'envoi du selfie et la comparaison
-      // faciale. Si l'un des deux échoue, l'écran retombe en `RETRY` et propose
-      // « Réessayer », qui relance une capture sur un flux définitivement
-      // éteint : les images produites sont celles d'une vidéo arrêtée, et
-      // l'action ne sera jamais détectée. Le client tourne en rond.
-      //
-      // CE QUI DEVRAIT ÊTRE : la caméra ne doit être coupée qu'une fois le
-      // parcours réellement engagé sur l'écran suivant, ou la reprise doit
-      // rappeler `init()` pour rouvrir le flux.
+    it("finalisation_enEchec_laisseLaCameraDisponiblePourUneReprise", async () => {
+      // La caméra était coupée dès l'entrée en finalisation, avant l'envoi du
+      // selfie et la comparaison faciale. Si l'un des deux échouait,
+      // « Réessayer » recapturait sur un flux éteint : aucune image ne sortait,
+      // et le client tournait en rond sans comprendre pourquoi.
       verifyFace.mockReturnValue(throwError(() => ({ error: { message: 'Comparaison indisponible' } })));
       const fixture = await ouvrirLEcran();
       await terminerLeDefi(fixture);
 
-      fixture.componentInstance.retryCurrentAction();
-      fixture.componentInstance.startCapture();
-      await laisserLaCaptureSeDerouler();
-
-      // La caméra n'est jamais rouverte : un seul démarrage pour tout l'écran.
-      expect(start).toHaveBeenCalledTimes(1);
-      expect(stop).toHaveBeenCalled();
+      // Le flux n'a jamais été arrêté : la reprise peut capturer.
+      expect(stop).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.error()).toBe('Comparaison indisponible');
     });
   });
 
@@ -624,17 +616,11 @@ describe('LivenessChallenge', () => {
       expect(stop).toHaveBeenCalled();
     });
 
-    it("destruction_pendantUneCapture_libereLaCameraMaisNInterromptPasLaSalve", async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // La caméra est bien coupée, mais la boucle de capture n'est liée à rien :
-      // elle continue de tourner sur un composant détruit, puis envoie au
-      // serveur des images prises après l'arrêt du flux. La souscription à la
-      // vérification n'est pas davantage annulée, et sa réponse écrit dans des
-      // signaux abandonnés.
-      //
-      // CE QUI DEVRAIT ÊTRE : la boucle doit s'arrêter à la destruction, et
-      // l'appel de vérification passer par `takeUntilDestroyed`.
+    it("destruction_pendantUneCapture_interromptLaSalve", async () => {
+      // La boucle de capture dure près de deux secondes. Sans drapeau, un
+      // client qui quittait l'écran pendant ce temps laissait la boucle tourner
+      // sur un flux déjà arrêté, puis envoyer au serveur des images prises
+      // après coup.
       const fixture = await ouvrirLEcran();
       fixture.componentInstance.startCapture();
       await vi.advanceTimersByTimeAsync(DELAI_AVANT_CAPTURE_MS + INTERVALLE_IMAGES_MS);
@@ -643,7 +629,7 @@ describe('LivenessChallenge', () => {
       await laisserLaCaptureSeDerouler();
 
       expect(stop).toHaveBeenCalled();
-      expect(verifyLivenessAction).toHaveBeenCalledTimes(1);
+      expect(verifyLivenessAction).not.toHaveBeenCalled();
     });
   });
 

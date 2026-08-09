@@ -6,11 +6,14 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -107,6 +110,55 @@ public class WhatsAppBankingClient {
     body.put("cgu_accepted", cguAccepted);
     body.put("source_ip", sourceIp == null ? "" : sourceIp);
     return postJson("/api/onboarding/customer", body);
+  }
+
+  /**
+   * Archive le dossier (recto/verso/selfie + décision) dans le back-office FirstAgent, pour que la
+   * revue conseiller retrouve les pièces d'un onboarding externe dans la même visionneuse que les
+   * onboardings internes. À appeler AVANT la purge du staging. Le token n'est pas consommé ici.
+   *
+   * <p>L'échec d'archivage ne doit jamais faire échouer l'inscription : l'appelant journalise et
+   * poursuit (le client, lui, a bien été créé).
+   */
+  public Map<String, Object> archiveDocuments(
+      String token, String decision, String docType, byte[] recto, byte[] verso, byte[] selfie) {
+    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+    body.add("token", token);
+    body.add("decision", decision == null ? "REVIEW" : decision);
+    body.add("doc_type", docType == null ? "CNI" : docType);
+    if (recto != null && recto.length > 0) {
+      body.add("recto", namedResource(recto, "recto.jpg"));
+    }
+    if (verso != null && verso.length > 0) {
+      body.add("verso", namedResource(verso, "verso.jpg"));
+    }
+    if (selfie != null && selfie.length > 0) {
+      body.add("selfie", namedResource(selfie, "selfie.jpg"));
+    }
+    try {
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+      headers.set("X-API-Key", apiKey);
+      return restTemplate
+          .exchange(
+              baseUrl + "/api/onboarding/documents",
+              HttpMethod.POST,
+              new HttpEntity<>(body, headers),
+              new ParameterizedTypeReference<Map<String, Object>>() {})
+          .getBody();
+    } catch (RestClientException e) {
+      throw translateError(e);
+    }
+  }
+
+  /** Ressource en mémoire portant un nom de fichier (exigé par le multipart). */
+  private static ByteArrayResource namedResource(byte[] bytes, String filename) {
+    return new ByteArrayResource(bytes) {
+      @Override
+      public String getFilename() {
+        return filename;
+      }
+    };
   }
 
   private Map<String, Object> postJson(String path, Map<String, Object> body) {

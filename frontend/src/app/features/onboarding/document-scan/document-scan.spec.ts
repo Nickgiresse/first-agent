@@ -614,56 +614,44 @@ describe('DocumentScan', () => {
       expect(component.error()).toBe('Le verso est illisible, refaites la prise sans reflet.');
     });
 
-    it("echec_laisseLaConsigneDeTraitementEnCoursAffichee", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // Le traitement a échoué et l'écran est revenu au recto, mais la consigne
-      // affiche encore « Analyse des documents en cours… ». Le client voit donc
-      // une erreur, un cadre de capture, et un message qui lui dit d'attendre.
-      // Le libellé n'est corrigé qu'à la première image analysée : si la caméra
-      // ne se rouvre pas, il reste faux indéfiniment.
-      //
-      // CE QUI DEVRAIT ÊTRE : `fail()` remet la consigne d'origine, celle qui
-      // demande de présenter le recto.
+    it("echec_retablitLaConsigneDeCapture", () => {
+      // Le traitement a échoué et l'écran revient au recto ; la consigne
+      // affichait pourtant encore « Analyse des documents en cours… ». Le
+      // client voyait une erreur, un cadre de capture, et un message qui lui
+      // disait d'attendre. Le libellé n'était corrigé qu'à la première image
+      // analysée, donc jamais si la caméra ne se rouvrait pas.
       uploadDocument.mockReturnValue(throwError(() => ({ error: { message: 'Panne' } })));
 
       capturerLesDeuxFaces();
 
-      expect(component.feedbackMessage()).toBe('Analyse des documents en cours…');
+      expect(component.feedbackMessage()).toContain('recto');
+      expect(component.feedbackMessage()).not.toContain('Analyse');
     });
 
-    it("succes_laisseLEcranBloqueSurLAnalyseSiLaNavigationEchoue", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // L'étape reste sur « UPLOADING » après le succès. Tant que la navigation
-      // aboutit, l'écran disparaît et personne ne le voit. Mais
-      // `NavigationService` avale les échecs de navigation en les
-      // journalisant : un garde qui refuse laisserait le client devant
-      // « Analyse des documents en cours… », caméra fermée, sans cadre de
-      // capture, sans message d'erreur et sans aucune action possible.
-      //
-      // CE QUI DEVRAIT ÊTRE : l'étape et la consigne sont rétablies avant la
-      // navigation, comme le fait `fail()` sur le chemin d'échec.
+    it("succes_retablitLEcranAvantDeNaviguer", () => {
+      // Tant que la navigation aboutit, l'écran disparaît et une étape restée
+      // sur « UPLOADING » ne se voit pas. Mais `NavigationService` avale les
+      // échecs : un garde qui refuse laissait le client devant « Analyse des
+      // documents en cours… », caméra fermée, sans cadre de capture, sans
+      // message d'erreur et sans aucune action possible.
       capturerLesDeuxFaces();
 
-      expect(component.step()).toBe('UPLOADING');
+      expect(component.step()).toBe('FRONT');
+      expect(component.feedbackMessage()).toContain('recto');
     });
 
-    it("priseIncomplete_nEnvoieRienMaisAnnonceUneSessionExpiree", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // La garde elle-même est utile : sans elle, un fichier vide partirait à
-      // la banque. C'est le message qui est faux. Il annonce une session
-      // expirée et renvoie le client à la vérification de son compte, alors que
-      // sa session est intacte et que seule une prise de vue s'est perdue. Le
-      // client refait toute l'étape précédente pour rien.
-      //
-      // CE QUI DEVRAIT ÊTRE : un message qui dit que la capture a été perdue et
-      // invite simplement à refaire les deux prises.
+    it("priseIncomplete_nEnvoieRienEtInviteARefaireLaPrise", () => {
+      // La garde est utile : sans elle, un fichier vide partirait à la banque.
+      // C'était le message qui était faux. Il annonçait une session expirée et
+      // renvoyait le client à la vérification de son compte, alors que sa
+      // session est intacte et que seule une prise de vue s'est perdue : il
+      // refaisait toute l'étape précédente pour rien.
       (component as unknown as { upload: () => void }).upload();
 
       expect(uploadDocument).not.toHaveBeenCalled();
-      expect(component.error()).toBe('Votre session a expiré. Recommencez la vérification du compte.');
+      expect(component.error()).toContain('prises de vue');
+      expect(component.error()).not.toContain('session');
+      expect(component.step()).toBe('FRONT');
     });
   });
 });
