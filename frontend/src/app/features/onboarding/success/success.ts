@@ -33,6 +33,19 @@ export class Success {
     this.state.clear();
   }
 
+  /**
+   * Confettis de l'écran de réussite.
+   *
+   * `Math.random` est ici sans conséquence : ces valeurs ne pilotent que la
+   * position, la couleur et la durée d'une animation décorative. Un aléatoire
+   * prévisible ne dit rien du client et ne protège rien.
+   *
+   * L'exemption est posée au plus près, sur ces lignes seulement, et non dans
+   * la configuration de l'analyseur : ailleurs dans une application bancaire un
+   * générateur prévisible reste un défaut, et la règle doit continuer d'y
+   * veiller.
+   */
+  /* eslint-disable sonarjs/pseudo-random */
   readonly confetti: ConfettiPiece[] = Array.from({ length: CONFETTI_COUNT }, () => ({
     left: Math.random() * 100,
     delay: Math.random() * 1.2,
@@ -41,4 +54,5 @@ export class Success {
     rotation: Math.random() * 360,
     drift: (Math.random() - 0.5) * 120
   }));
+  /* eslint-enable sonarjs/pseudo-random */
 }

@@ -2,6 +2,7 @@
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
+const sonarjs = require('eslint-plugin-sonarjs');
 
 /**
  * Analyse statique du frontend (charte §7.1).
@@ -47,6 +48,12 @@ module.exports = tseslint.config(
       eslint.configs.recommended,
       ...tseslint.configs.recommended,
       ...angular.configs.tsRecommended,
+      // Règles SonarSource, celles-là mêmes qu'exécute SonarQube sur du
+      // TypeScript. La porte qualité de la charte §7.3 suppose un serveur, qui
+      // n'existe pas encore ; le moteur d'analyse, lui, tourne hors serveur et
+      // n'a aucune raison d'attendre. Restera à raccorder pour la porte
+      // elle-même, le suivi dans le temps et la notion de « code nouveau ».
+      sonarjs.configs.recommended,
     ],
     processor: angular.processInlineTemplates,
     rules: {
@@ -91,6 +98,17 @@ module.exports = tseslint.config(
       // la console du client ce que le développeur regardait. `console.warn` et
       // `console.error` restent admis : ils signalent, ils n'inspectent pas.
       'no-console': ['error', { allow: ['warn', 'error'] }],
+
+      // Un TODO n'est pas un défaut mais une note, et le seul qui reste
+      // aujourd'hui attend une décision métier : l'adresse WhatsApp définitive
+      // du service client. Bloquer dessus obligerait soit à inventer une
+      // valeur, soit à effacer la note. Signalé, donc, mais pas bloquant.
+      'sonarjs/todo-tag': 'warn',
+
+      // Le garde d'onboarding rend `boolean | UrlTree`, ce qui est le contrat
+      // même de `CanActivateFn` : rendre un UrlTree est la façon dont Angular
+      // veut qu'un garde redirige. La règle ne connaît pas ce cadre.
+      'sonarjs/function-return-type': 'off',
     },
     languageOptions: {
       parserOptions: {
@@ -119,6 +137,16 @@ module.exports = tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
+
+      // Un test paramétré est plus court mais moins lisible en cas d'échec :
+      // le rapport nomme le jeu de données, pas la situation métier. Sur des
+      // règles réglementaires, un intitulé qui dit ce qui a cassé vaut mieux
+      // que quelques lignes économisées.
+      'sonarjs/parameterized-tests': 'off',
+
+      // Deux cas de test peuvent légitimement partager la même préparation
+      // sans que cela signale une duplication à corriger.
+      'sonarjs/no-identical-functions': 'off',
     },
   },
 );

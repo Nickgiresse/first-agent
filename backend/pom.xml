@@ -216,6 +216,60 @@
 			</plugin>
 
 			<!--
+			  PMD : « code smells » et copier-coller (charte §10).
+
+			  Il comble ce que les trois autres outils ne voient pas. Spotless
+			  met en forme, Checkstyle vérifie les conventions, SpotBugs cherche
+			  des défauts d'exécution ; PMD, lui, regarde la structure : méthode
+			  trop longue, condition inutilement complexe, ressource non
+			  refermée, et surtout duplication.
+
+			  RAPPORT AVEC SONARQUBE. La porte SonarQube exigée par la charte
+			  suppose un serveur, qui n'existe pas encore. Une grande part de
+			  ses règles Java vient cependant de ce moteur : l'ajouter ici fait
+			  tourner l'analyse aujourd'hui, sans attendre l'infrastructure. Le
+			  serveur restera nécessaire pour la porte elle-même, le suivi dans
+			  le temps et la notion de « code nouveau ».
+
+			  Non bloquant pour les mêmes raisons que SpotBugs : le parc
+			  existant n'a pas été traité.
+			  Rapport : firstagent-*/target/pmd.xml et cpd.xml
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.26.0</version>
+				<configuration>
+					<targetJdk>21</targetJdk>
+					<printFailingErrors>true</printFailingErrors>
+					<failOnViolation>false</failOnViolation>
+					<rulesets>
+						<ruleset>${maven.multiModuleProjectDirectory}/config/pmd-ruleset.xml</ruleset>
+					</rulesets>
+					<excludeRoots>
+						<excludeRoot>target/generated-sources</excludeRoot>
+					</excludeRoots>
+					<!--
+					  Seuil de duplication. 100 jetons représentent une bonne
+					  vingtaine de lignes : en deçà, on signalerait des suites
+					  d'accesseurs et des blocs de construction qui se
+					  ressemblent sans être du copier-coller.
+					-->
+					<minimumTokens>100</minimumTokens>
+				</configuration>
+				<executions>
+					<execution>
+						<id>analyse-structure</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>pmd</goal>
+							<goal>cpd</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!--
 			  Détection de bugs et de failles (charte §10). FindSecBugs ajoute
 			  à SpotBugs les motifs propres à la sécurité : injections,
 			  aléatoire prévisible, secrets en dur, désérialisation.

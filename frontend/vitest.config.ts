@@ -26,29 +26,23 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        // Quelques processus, et non un seul ni autant que de cœurs.
-        //
-        // Un processus unique a d'abord semblé la réponse, mais il accumule
-        // l'environnement de chaque fichier de test : le coût croît avec leur
-        // nombre, et la mesure a recassé dès que la suite est passée de 25 à
-        // 27 fichiers. À l'inverse, les 16 forks par défaut saturent les 3 Go
-        // libres de la machine.
-        //
-        // Deux processus recyclés bornent les deux effets à la fois.
-        maxForks: 2,
-        minForks: 1,
-        // Le plafond est ici et non dans une variable d'environnement : une
-        // mesure qui ne tient que si l'on pense à exporter NODE_OPTIONS avant
-        // de la lancer finit par être lancée sans, et par mentir.
-        //
-        // 1,5 Go par processus, soit MOINS que le défaut de Node. C'est le
-        // sens du réglage : brider pour que le ramasse-miettes travaille, au
-        // lieu de laisser grossir jusqu'au refus du système.
-        execArgv: ['--max-old-space-size=1536'],
-      },
-    },
+
+    // Quelques processus, et non un seul ni autant que de cœurs.
+    //
+    // Un processus unique a d'abord semblé la réponse, mais il accumule
+    // l'environnement de chaque fichier de test : le coût croît avec leur
+    // nombre, et la mesure a recassé dès que la suite est passée de 25 à 27
+    // fichiers. À l'inverse, le défaut suit le nombre de cœurs, ici seize, ce
+    // qui sature les 3 Go libres de la machine.
+    //
+    // ATTENTION AU NOM DE CES OPTIONS. Elles vivaient sous `poolOptions.forks`
+    // jusqu'à Vitest 3. Dans Vitest 4 ce bloc est SUPPRIMÉ, et une
+    // configuration qui l'emploie encore n'échoue pas : elle émet une simple
+    // dépréciation, puis les réglages sont ignorés. La mesure repartait donc
+    // sur les valeurs par défaut sans que rien ne le dise, ce qui est
+    // exactement le genre de silence que ce fichier existe pour éviter.
+    maxWorkers: 2,
+    minWorkers: 1,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],

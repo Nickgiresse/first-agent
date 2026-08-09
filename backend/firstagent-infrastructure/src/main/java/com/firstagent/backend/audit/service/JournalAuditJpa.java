@@ -130,9 +130,7 @@ public class JournalAuditJpa implements JournalAudit {
   @Override
   @Transactional(readOnly = true)
   public ResultatVerification verifier(Long limite) {
-    String attendu = EntreeAudit.GENESE;
-    long verifiees = 0;
-    long nonScellees = 0;
+    Avancement avancement = new Avancement();
     Instant positionHorodatage = null;
     java.util.UUID positionId = null;
     Long restant = limite;
@@ -151,38 +149,9 @@ public class JournalAuditJpa implements JournalAudit {
         break;
       }
 
-      for (AuditLogEntry entree : page) {
-        String stocke = entree.getEntryHash();
-        if (stocke == null || stocke.isBlank()) {
-          // Entrée antérieure au scellement : elle ne rompt pas la chaîne mais
-          // n'est couverte par aucune garantie. Comptée à part pour que ce soit
-          // visible plutôt que silencieux.
-          nonScellees++;
-          continue;
-        }
-
-        if (!attendu.equals(entree.getPrevHash())) {
-          return ResultatVerification.rompue(
-              verifiees,
-              nonScellees,
-              rupture(
-                  entree,
-                  ResultatVerification.MotifRupture.CHAINAGE_ROMPU,
-                  attendu,
-                  entree.getPrevHash()));
-        }
-
-        String recalcule = scelleur.empreinte(entree.versDomaine());
-        if (!scelleur.correspond(recalcule, stocke)) {
-          return ResultatVerification.rompue(
-              verifiees,
-              nonScellees,
-              rupture(
-                  entree, ResultatVerification.MotifRupture.CONTENU_MODIFIE, recalcule, stocke));
-        }
-
-        attendu = stocke;
-        verifiees++;
+      ResultatVerification.Rupture rupture = verifierPage(page, avancement);
+      if (rupture != null) {
+        return ResultatVerification.rompue(avancement.verifiees, avancement.nonScellees, rupture);
       }
 
       AuditLogEntry derniere = page.get(page.size() - 1);
@@ -193,7 +162,62 @@ public class JournalAuditJpa implements JournalAudit {
       }
     }
 
-    return ResultatVerification.intacte(verifiees, nonScellees);
+    return ResultatVerification.intacte(avancement.verifiees, avancement.nonScellees);
+  }
+
+  /**
+   * Position atteinte dans le parcours de la chaîne.
+   *
+   * <p>Ces trois valeurs progressent ensemble d'une page à l'autre. Les passer séparément à la
+   * méthode de vérification obligerait à rendre un objet composite pour les récupérer, ce qui
+   * reviendrait au même en plus verbeux.
+   */
+  private static final class Avancement {
+    private String attendu = EntreeAudit.GENESE;
+    private long verifiees;
+    private long nonScellees;
+  }
+
+  /**
+   * Vérifie une page d'entrées et rend la première rupture rencontrée.
+   *
+   * <p>Séparée du parcours parce que les deux font des choses différentes : le parcours borne la
+   * mémoire et avance dans le journal, cette méthode contrôle la chaîne. Les tenir ensemble donnait
+   * une méthode dont la complexité cognitive dépassait le seuil, et surtout dont on ne pouvait plus
+   * lire l'une des deux intentions sans l'autre.
+   *
+   * @return la rupture constatée, ou {@code null} si la page est intacte
+   */
+  private ResultatVerification.Rupture verifierPage(
+      List<AuditLogEntry> page, Avancement avancement) {
+    for (AuditLogEntry entree : page) {
+      String stocke = entree.getEntryHash();
+      if (stocke == null || stocke.isBlank()) {
+        // Entrée antérieure au scellement : elle ne rompt pas la chaîne mais
+        // n'est couverte par aucune garantie. Comptée à part pour que ce soit
+        // visible plutôt que silencieux.
+        avancement.nonScellees++;
+        continue;
+      }
+
+      if (!avancement.attendu.equals(entree.getPrevHash())) {
+        return rupture(
+            entree,
+            ResultatVerification.MotifRupture.CHAINAGE_ROMPU,
+            avancement.attendu,
+            entree.getPrevHash());
+      }
+
+      String recalcule = scelleur.empreinte(entree.versDomaine());
+      if (!scelleur.correspond(recalcule, stocke)) {
+        return rupture(
+            entree, ResultatVerification.MotifRupture.CONTENU_MODIFIE, recalcule, stocke);
+      }
+
+      avancement.attendu = stocke;
+      avancement.verifiees++;
+    }
+    return null;
   }
 
   private ResultatVerification.Rupture rupture(

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="FirstAgent"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>
+    Règles PMD du projet.
+
+    Sélection délibérée, et non une catégorie entière. Les jeux complets de PMD
+    contiennent beaucoup de règles contradictoires entre elles ou dépassées :
+    activées en bloc, elles produisent des centaines de signalements que
+    personne ne lit, et l'outil perd toute autorité.
+
+    Ne sont retenues ici que des règles qui désignent un défaut réel, et que
+    les trois autres outils du projet ne voient pas. Spotless met en forme,
+    Checkstyle vérifie les conventions, SpotBugs cherche des défauts
+    d'exécution ; PMD regarde la structure.
+  </description>
+
+  <!-- ── Correction ────────────────────────────────────────── -->
+
+  <!-- Une ressource non refermée finit par épuiser le pool de connexions ou
+       les descripteurs de fichiers. Le symptôme apparaît en charge, loin du
+       code fautif. -->
+  <rule ref="category/java/errorprone.xml/CloseResource"/>
+
+  <!-- Comparer des flottants par égalité ne donne pas ce qu'on croit. Sur des
+       montants, la conséquence est un écart comptable. -->
+  <rule ref="category/java/errorprone.xml/CompareObjectsWithEquals"/>
+
+  <!-- Une exception attrapée puis ignorée fait disparaître la panne sans
+       trace, et c'est le pire cas pour un diagnostic. -->
+  <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
+    <properties>
+      <property name="allowCommentedBlocks" value="true"/>
+    </properties>
+  </rule>
+
+  <!-- Retourner null là où une collection est attendue oblige chaque appelant
+       à s'en souvenir ; un seul oubli suffit. -->
+  <rule ref="category/java/errorprone.xml/ReturnEmptyCollectionRatherThanNull"/>
+
+  <!-- Assigner à null pour « libérer » n'aide en rien le ramasse-miettes et
+       masque souvent une variable qui devrait être locale. -->
+  <rule ref="category/java/errorprone.xml/NullAssignment"/>
+
+  <!-- Un `equals` sans `hashCode` casse silencieusement les collections de
+       hachage : l'objet devient introuvable dans le Set où il a été mis. -->
+  <rule ref="category/java/errorprone.xml/OverrideBothEqualsAndHashcode"/>
+
+  <!-- ── Sécurité ──────────────────────────────────────────── -->
+
+  <!-- Un aléatoire prévisible utilisé pour un code OTP ou un jeton se devine.
+       SecureRandom est le seul admissible dans ce projet. -->
+  <rule ref="category/java/security.xml/InsecureCryptoIv"/>
+
+  <!-- ── Structure ─────────────────────────────────────────── -->
+
+  <!-- Complexité cyclomatique : le nombre de chemins d'exécution d'une
+       méthode. Au delà, elle ne se teste plus exhaustivement et ne se relit
+       plus d'un trait. Le seuil est haut, pour ne signaler que ce qui est
+       vraiment hors norme. -->
+  <rule ref="category/java/design.xml/CyclomaticComplexity">
+    <properties>
+      <property name="classReportLevel" value="80"/>
+      <property name="methodReportLevel" value="15"/>
+    </properties>
+  </rule>
+
+  <!-- Une condition à plus de quatre opérateurs booléens ne se vérifie plus
+       de tête, et c'est là que se logent les erreurs de logique métier. -->
+  <rule ref="category/java/design.xml/CognitiveComplexity">
+    <properties>
+      <property name="reportLevel" value="20"/>
+    </properties>
+  </rule>
+
+  <!-- Un paramètre réassigné rend la valeur reçue introuvable à la lecture :
+       on croit lire l'argument de l'appelant, on lit autre chose. -->
+  <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+
+  <!-- Un bloc `catch` qui relance sans rien ajouter n'apporte rien et allonge
+       la trace. -->
+  <rule ref="category/java/design.xml/ExceptionAsFlowControl"/>
+
+  <!-- ── Ce qui est volontairement absent ──────────────────────
+       Les règles de nommage : Checkstyle les traite déjà, et deux outils qui
+       signalent le même défaut font ignorer les deux.
+       Les règles de mise en forme : Spotless les rend sans objet.
+       Les règles de documentation obligatoire : imposer un Javadoc partout
+       produit des « @param nom le nom » qui n'apprennent rien à personne.
+  -->
+
+</ruleset>

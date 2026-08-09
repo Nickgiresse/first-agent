@@ -1,4 +1,5 @@
 import { Location } from '@angular/common';
+import { errorMessage } from '../../../core/utils/error-message';
 import { NavigationService } from '../../../core/services/navigation';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -55,6 +56,14 @@ export class Kyc {
       this.email.markAsTouched();
       return;
     }
+    // Le délai entre deux envois se contrôle ICI, seul point d'envoi, et non
+    // dans resendCode(). Placé là-bas, il se contournait en deux clics :
+    // « Modifier l'adresse » ramène au formulaire en arrêtant le décompte, et
+    // l'envoi repartait sans aucune garde, autant de fois que voulu. Chaque
+    // envoi coûte un courriel et ouvre une fenêtre de code valide.
+    if (this.cooldownRemaining() > 0) {
+      return;
+    }
     this.submitting.set(true);
     this.error.set(null);
     this.service.requestEmailOtp({ email: this.email.value }).subscribe({
@@ -65,14 +74,14 @@ export class Kyc {
         this.startCooldown();
       },
       error: err => {
-        this.error.set(err?.message ?? err?.error?.message ?? 'Impossible d’envoyer le code de vérification.');
+        this.error.set(errorMessage(err, 'Impossible d’envoyer le code de vérification.'));
         this.submitting.set(false);
       }
     });
   }
 
   resendCode(): void {
-    if (this.cooldownRemaining() > 0 || this.submitting()) return;
+    if (this.submitting()) return;
     this.requestCode();
   }
 
@@ -82,7 +91,9 @@ export class Kyc {
   changeEmail(): void {
     this.phase.set('EMAIL');
     this.error.set(null);
-    this.stopCooldown();
+    // Le décompte n'est PAS arrêté : il protège l'envoi, pas l'écran. L'arrêter
+    // ici rendait la protection inopérante, et laissait de surcroît un compteur
+    // figé à sa dernière valeur si la nouvelle demande échouait.
   }
 
   verifyCode(): void {
@@ -95,10 +106,15 @@ export class Kyc {
     this.service.verifyEmailOtp({ code: this.code.value }).subscribe({
       next: () => {
         this.state.setEmail(this.email.value);
+        // `submitting` retombe AVANT de naviguer. Le laisser à vrai ne se
+        // remarque pas tant que la navigation aboutit, mais un garde qui
+        // refuse laisserait le client devant un bouton « Vérification… »
+        // définitivement inerte, sans message.
+        this.submitting.set(false);
         this.navigation.navigateTo('/onboarding/pin-creation');
       },
       error: err => {
-        this.error.set(err?.message ?? err?.error?.message ?? 'Code de vérification incorrect.');
+        this.error.set(errorMessage(err, 'Code de vérification incorrect.'));
         this.submitting.set(false);
       }
     });

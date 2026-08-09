@@ -1,4 +1,5 @@
 import { Location } from '@angular/common';
+import { errorMessage } from '../../../core/utils/error-message';
 import { NavigationService } from '../../../core/services/navigation';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -86,7 +87,7 @@ export class DocumentOcrReview implements OnInit {
         this.loading.set(false);
       },
       error: error => {
-        this.error.set(error?.message ?? error?.error?.message ?? 'Impossible de récupérer les données extraites.');
+        this.error.set(errorMessage(error, 'Impossible de récupérer les données extraites.'));
         this.loading.set(false);
       }
     });
@@ -100,7 +101,7 @@ export class DocumentOcrReview implements OnInit {
     this.docs.confirmOcrData(this.form.getRawValue()).subscribe({
       next: () => this.navigation.navigateTo('/onboarding/liveness-challenge'),
       error: error => {
-        this.error.set(error?.message ?? error?.error?.message ?? 'Impossible de confirmer ces informations.');
+        this.error.set(errorMessage(error, 'Impossible de confirmer ces informations.'));
         this.submitting.set(false);
       }
     });

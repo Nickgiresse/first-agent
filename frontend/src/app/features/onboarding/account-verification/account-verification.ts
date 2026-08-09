@@ -1,4 +1,5 @@
 import { Location } from '@angular/common';
+import { errorMessage } from '../../../core/utils/error-message';
 import { NavigationService } from '../../../core/services/navigation';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AccountService } from '../../../core/services/account';
@@ -34,6 +35,10 @@ export class AccountVerification {
 
   onAccountDigitsChange(val: string): void {
     this.digits.set(val);
+    // Effacer l'erreur dès la correction : « Compte introuvable » resterait
+    // sinon affichée sous un champ que le client vient de modifier, et lui
+    // laisserait croire que sa correction est refusée elle aussi.
+    this.error.set(null);
   }
 
   submit(): void {
@@ -51,10 +56,15 @@ export class AccountVerification {
           return;
         }
         this.state.setAccountVerified(data.sessionToken, data.firstName, data.lastName, data.expiresInSeconds);
+        // Voir kyc.ts : `submitting` retombe avant la navigation, faute de quoi
+        // une navigation refusée laisserait le client devant un bouton inerte.
+        this.submitting.set(false);
         this.navigation.navigateTo('/onboarding/kyc');
       },
       error: err => {
-        this.error.set(err?.message ?? err?.error?.message ?? 'Impossible de vérifier ce compte. Veuillez réessayer.');
+        this.error.set(
+          errorMessage(err, 'Impossible de vérifier ce compte. Veuillez réessayer.')
+        );
         this.submitting.set(false);
       }
     });
