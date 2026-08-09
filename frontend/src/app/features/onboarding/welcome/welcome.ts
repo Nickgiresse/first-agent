@@ -22,9 +22,18 @@ export class Welcome implements OnInit {
     if (!token) {
       return;
     }
-    this.state.setLinkToken(token);
     this.service.verifyLink(token).subscribe({
       next: res => {
+        // Le jeton n'est conservé QU'APRÈS vérification.
+        //
+        // L'enregistrer d'emblée paraissait sans conséquence, le parcours
+        // restant accessible en cas d'échec. Mais il n'était jamais effacé :
+        // le client menait tout le KYC, et la finalisation renvoyait ce jeton
+        // périmé au WhatsApp banking, qui refusait l'écriture et annulait la
+        // transaction. Tout le parcours était perdu au dernier écran, alors
+        // qu'un parcours ouvert sans lien du tout, lui, aboutissait.
+        this.state.setLinkToken(token);
+
         if (res?.data?.name) {
           this.knownName.set(res.data.name);
         }
@@ -32,7 +41,8 @@ export class Welcome implements OnInit {
         this.lang.applyFromLink(res?.data?.lang);
       },
       error: () => {
-        // Lien invalide ou expiré : le parcours standard (saisie du compte) reste accessible.
+        // Lien invalide ou expiré : le parcours standard (saisie du compte)
+        // reste accessible, et sans jeton mort qui le ferait échouer à la fin.
       }
     });
   }

@@ -53,6 +53,20 @@ export class LivenessChallenge {
   }
 
   startCapture(): void {
+    // Deux gardes, dans cet ordre.
+    //
+    // La phase d'abord : sans elle, deux clics lançaient deux salves sur la
+    // même action, et CHAQUE réponse incrémentait l'index. Une action du défi
+    // n'était donc jamais demandée, et le parcours se terminait avec une
+    // épreuve de moins que ce que le serveur avait tiré. C'était le
+    // contournement le plus direct de la protection contre la photo imprimée.
+    //
+    // L'action ensuite, et avant de changer de phase : poser « CAPTURING »
+    // puis sortir laissait l'écran figé sur une capture qui n'a jamais
+    // commencé, sans erreur ni bouton.
+    if (this.phase() !== 'READY' || !this.currentAction()) {
+      return;
+    }
     this.phase.set('CAPTURING');
     void this.captureAndVerify();
   }

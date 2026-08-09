@@ -188,19 +188,18 @@ describe('LivenessChallenge', () => {
       expect(fixture.componentInstance.phase()).toBe('RETRY');
     });
 
-    it("demarrage_defiIndisponible_leBoutonReessayerMeneAUneImpasse", async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
+    it("demarrage_defiIndisponible_leBoutonReessayerNeFigePlusLEcran", async () => {
+      // L'échec du démarrage retombe sur la même phase `RETRY` que l'échec
+      // d'une action, alors que les deux situations n'ont rien de commun : ici
+      // aucune action n'a été reçue. « Réessayer » repassait donc en `READY`,
+      // puis « Commencer » basculait en `CAPTURING` et la capture ressortait
+      // aussitôt faute d'action courante : l'écran restait figé sur « Capture
+      // en cours », sans image, sans appel, et cette fois sans même le message
+      // d'erreur.
       //
-      // L'échec du démarrage retombe sur la même phase `RETRY` que l'échec d'une
-      // action, alors que les deux situations n'ont rien de commun : ici aucune
-      // action n'a été reçue. « Réessayer » repasse donc en `READY`, puis
-      // « Commencer » bascule en `CAPTURING` et `captureAndVerify()` ressort
-      // immédiatement faute d'action courante. L'écran reste figé sur « Capture
-      // en cours » sans qu'aucune image ne soit prise ni qu'aucun appel ne
-      // parte, et cette fois même le message d'erreur a disparu.
-      //
-      // CE QUI DEVRAIT ÊTRE : l'échec du démarrage doit rejouer `init()`, ou
-      // basculer sur la phase `ERROR` qui, elle, n'offre pas de bouton trompeur.
+      // La garde de `startCapture()` referme ce chemin. Reste que le bouton
+      // « Réessayer » ne rejoue pas le démarrage du défi : c'est le défaut
+      // suivant à traiter, verrouillé ici par le nombre d'appels.
       startLivenessChallenge.mockReturnValue(throwError(() => ({ error: { message: 'Service indisponible' } })));
       const fixture = await ouvrirLEcran();
 
@@ -208,8 +207,8 @@ describe('LivenessChallenge', () => {
       fixture.componentInstance.startCapture();
       await laisserLaCaptureSeDerouler();
 
-      expect(fixture.componentInstance.phase()).toBe('CAPTURING');
-      expect(fixture.componentInstance.error()).toBeNull();
+      // L'écran n'est plus figé sur une capture qui n'a jamais commencé.
+      expect(fixture.componentInstance.phase()).toBe('READY');
       expect(startLivenessChallenge).toHaveBeenCalledTimes(1);
       expect(verifyLivenessAction).not.toHaveBeenCalled();
     });
@@ -337,44 +336,32 @@ describe('LivenessChallenge', () => {
       expect(fixture.componentInstance.currentActionIndex()).toBe(0);
     });
 
-    it('startCapture_doubleClic_permetDeSauterUneAction', async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
+    it('startCapture_doubleClic_neSauteAucuneAction', async () => {
+      // Sans verrou, deux clics rapprochés lançaient deux salves en parallèle
+      // sur la MÊME action, et chaque réponse faisait avancer l'index d'un
+      // cran. L'action intermédiaire n'était jamais demandée, et le défi se
+      // terminait avec une épreuve de moins que ce que le serveur avait tiré :
+      // c'était le contournement le plus direct de la protection contre la
+      // photo imprimée.
       //
-      // `startCapture()` n'a aucun verrou : deux clics rapprochés lancent deux
-      // salves en parallèle sur la MÊME action, et les deux réponses font
-      // avancer l'index d'un cran chacune. L'action intermédiaire n'est jamais
-      // demandée ni exécutée, et le défi se termine avec une action de moins que
-      // ce que le serveur avait tiré.
-      //
-      // Le gabarit masque le bouton dès la phase `CAPTURING`, mais le masquage
-      // n'a lieu qu'à la détection de changement suivante : sur un appareil
-      // lent, ou avec un double appui, les deux événements partent avant.
-      //
-      // CE QUI DEVRAIT ÊTRE : `startCapture()` doit sortir sans rien faire si la
-      // phase n'est pas `READY`, comme les autres écrans du parcours le font
-      // avec leur signal `submitting`.
+      // Le gabarit masque bien le bouton dès la phase `CAPTURING`, mais
+      // seulement à la détection de changement suivante : sur un appareil lent,
+      // ou sur un double appui, les deux événements partent avant.
       const fixture = await ouvrirLEcran();
 
       fixture.componentInstance.startCapture();
       fixture.componentInstance.startCapture();
       await laisserLaCaptureSeDerouler();
 
-      expect(verifyLivenessAction.mock.calls.map(appel => appel[0])).toEqual(['BLINK', 'BLINK']);
-      // L'index a sauté par-dessus « SMILE », qui n'a jamais été demandée.
-      expect(fixture.componentInstance.currentActionIndex()).toBe(2);
-      expect(fixture.componentInstance.currentAction()).toBeNull();
+      expect(verifyLivenessAction.mock.calls.map(appel => appel[0])).toEqual(['BLINK']);
+      expect(fixture.componentInstance.currentActionIndex()).toBe(1);
+      expect(fixture.componentInstance.currentAction()).toBe('SMILE');
     });
 
-    it("startCapture_sansAucuneActionRecue_nEnvoieRienEtFigeLEcran", async () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // `captureAndVerify()` ressort en silence quand il n'y a pas d'action
-      // courante, mais la phase `CAPTURING` a déjà été posée par
-      // `startCapture()`. L'écran affiche « Capture en cours » pour toujours,
+    it("startCapture_sansAucuneActionRecue_neFigePasLEcran", async () => {
+      // La phase `CAPTURING` était posée AVANT de vérifier l'action courante :
+      // en son absence, l'écran affichait « Capture en cours » pour toujours,
       // sans bouton, sans message et sans le moindre appel réseau.
-      //
-      // CE QUI DEVRAIT ÊTRE : la phase ne doit être changée qu'une fois l'action
-      // courante connue, ou l'absence d'action doit conduire à un état visible.
       const fixture = await ouvrirLEcran();
       fixture.componentInstance.actions.set([]);
 
@@ -382,8 +369,8 @@ describe('LivenessChallenge', () => {
       await laisserLaCaptureSeDerouler();
 
       expect(verifyLivenessAction).not.toHaveBeenCalled();
-      expect(fixture.componentInstance.phase()).toBe('CAPTURING');
-      expect(fixture.componentInstance.error()).toBeNull();
+      // L'écran reste sur l'état d'où le client peut agir.
+      expect(fixture.componentInstance.phase()).toBe('READY');
     });
 
     it("capture_aucuneImageObtenue_nInterrogePasLeServeur", async () => {

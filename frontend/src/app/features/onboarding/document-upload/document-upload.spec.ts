@@ -137,39 +137,29 @@ describe('DocumentUpload', () => {
       await vi.waitFor(() => expect(component.frontPreview()).not.toBe(premierApercu));
     });
 
-    it('pick_fichierDeDouzeMo_estAcceptéSansContrôleDeTaille', () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // Le gabarit annonce « JPG ou PNG, 5 Mo maximum par fichier », et l'écran
-      // ne vérifie rien. Le fichier part quand même : sur une connexion
-      // mobile camerounaise, le client paie plusieurs minutes de téléversement
-      // pour recevoir en fin de course un refus du serveur, et sa seule voie de
-      // repli, cet écran, vient d'échouer.
-      //
-      // CE QUI DEVRAIT ÊTRE : `pick()` refuse au-delà de 5 Mo, garde le champ
-      // vide et affiche la limite annoncée, sans qu'aucun octet ne parte.
-      choisir('front', fichier('scan-haute-definition.jpg', 'image/jpeg', 12 * 1024 * 1024));
+    it('pick_fichierDeDouzeMo_estRefuseAvantTouteMontee', () => {
+      // Le gabarit annonce « JPG ou PNG, 5 Mo maximum par fichier » et rien ne
+      // le vérifiait. Sur une connexion mobile, le client payait plusieurs
+      // minutes de téléversement pour se voir refuser en fin de course, et sa
+      // seule voie de repli, cet écran, venait d'échouer.
+      choisir('front', fichier('scan-haute-definition.jpg', 'image/jpeg', CINQ_MO + 1));
 
-      expect(component.front()!.size).toBeGreaterThan(CINQ_MO);
-      expect(component.error()).toBeNull();
+      expect(component.front()).toBeNull();
+      // Le message donne le poids réel et la limite : « fichier invalide »
+      // laisserait le client rechoisir la même photo.
+      expect(component.error()).toContain('5 Mo');
     });
 
-    it('pick_fichierPdf_estAcceptéSansContrôleDeType', () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // L'attribut `accept="image/jpeg,image/png"` du gabarit n'est qu'un
-      // filtre d'affichage du sélecteur : le glisser-déposer et l'option
-      // « Tous les fichiers » le contournent sur la plupart des systèmes. Un
-      // PDF ou un HEIC d'iPhone arrive donc jusqu'au moteur OCR, qui ne sait
-      // pas le lire, et le client reçoit une erreur d'extraction sans jamais
-      // comprendre que c'est le format de son fichier qui est en cause.
-      //
-      // CE QUI DEVRAIT ÊTRE : `pick()` n'accepte que `image/jpeg` et
-      // `image/png`, et nomme le format attendu quand il refuse.
+    it('pick_fichierPdf_estRefuseEtNommeLeFormatAttendu', () => {
+      // L'attribut `accept` du gabarit n'est qu'un filtre d'affichage du
+      // sélecteur : le glisser-déposer et l'option « Tous les fichiers » le
+      // contournent. Un PDF ou un HEIC d'iPhone atteignait donc le moteur OCR,
+      // qui ne sait pas le lire, et le client recevait une erreur d'extraction
+      // sans comprendre que c'était le format de son fichier qui était en cause.
       choisir('front', fichier('carte-identite.pdf', 'application/pdf'));
 
-      expect(component.front()?.type).toBe('application/pdf');
-      expect(component.error()).toBeNull();
+      expect(component.front()).toBeNull();
+      expect(component.error()).toContain('JPEG');
     });
   });
 
@@ -230,17 +220,11 @@ describe('DocumentUpload', () => {
       expect(navigateTo).not.toHaveBeenCalled();
     });
 
-    it('submit_doubleClic_envoieDeuxFoisLesMemesFichiers', () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
+    it('submit_doubleClic_nEnvoieQuUneFoisLesFichiers', () => {
+      // Avant la garde, la seule protection était l'attribut `disabled` du
+      // gabarit. Sur un téléphone lent, les deux clics passaient avant le
+      // premier rendu et le dossier recevait quatre pièces au lieu de deux.
       //
-      // La seule protection contre le double envoi est l'attribut `disabled`
-      // du gabarit. Le code, lui, n'a aucune garde sur `sending()`, alors que
-      // les autres écrans du parcours en ont une. Sur un téléphone lent, les
-      // deux clics passent avant le premier rendu, et le dossier reçoit quatre
-      // pièces au lieu de deux.
-      //
-      // CE QUI DEVRAIT ÊTRE : `submit()` commence par `if (this.sending())
-      // return;`, comme le fait déjà l'écran de vérification du compte.
       // Le premier envoi reste en vol : c'est exactement l'instant où le second
       // clic arrive.
       uploadDocument.mockReturnValue(NEVER);
@@ -249,7 +233,7 @@ describe('DocumentUpload', () => {
       component.submit();
       component.submit();
 
-      expect(uploadDocument).toHaveBeenCalledTimes(2);
+      expect(uploadDocument).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -342,43 +326,33 @@ describe('DocumentUpload', () => {
       expect(continuer.disabled).toBe(false);
     });
 
-    it('pick_apresUnEchec_laisseLeMessageDErreurAffiche', () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
+    it('pick_apresUnEchec_effaceLeMessageDevenuCaduc', () => {
       // Le client comprend que sa photo était en cause, en choisit une autre,
-      // et « Fichier rejeté » reste affiché sous un champ qu'il vient pourtant
-      // de corriger : rien ne lui dit que son nouveau choix est recevable.
-      //
-      // CE QUI DEVRAIT ÊTRE : `pick()` efface l'erreur devenue caduque, comme
-      // le fait l'écran de vérification du compte à chaque saisie.
+      // et « Fichier rejeté » restait affiché sous un champ qu'il venait
+      // pourtant de corriger : rien ne lui disait que son nouveau choix était
+      // recevable.
       uploadDocument.mockReturnValue(throwError(() => ({ error: { message: 'Fichier rejeté' } })));
       choisirLesDeuxFaces();
       component.submit();
 
       choisir('front', fichier('recto-net.jpg'));
 
-      expect(component.error()).toBe('Fichier rejeté');
+      expect(component.error()).toBeNull();
     });
   });
 
   describe('fin du dépôt', () => {
-    it("submit_succes_neLibereJamaisLeBouton", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // `sending` reste vrai après le succès : tant que la navigation aboutit,
-      // l'écran disparaît et personne ne le voit. Mais `NavigationService`
-      // avale les échecs de navigation en les journalisant : un garde qui
-      // refuse laisserait le client sur cet écran, devant un bouton
-      // « Analyse qualité & extraction OCR… » définitivement inerte, sans le
-      // moindre message.
-      //
-      // CE QUI DEVRAIT ÊTRE : `sending` retombe avant la navigation, comme le
-      // fait l'écran de vérification du code à usage unique.
+    it("submit_succes_libereLeBoutonAvantDeNaviguer", () => {
+      // Tant que la navigation aboutit, l'écran disparaît et un bouton resté en
+      // chargement ne se voit pas. Mais `NavigationService` avale les échecs de
+      // navigation : un garde qui refuse laisserait le client sur cet écran,
+      // devant un bouton « Analyse qualité & extraction OCR… » définitivement
+      // inerte et sans le moindre message.
       choisirLesDeuxFaces();
 
       component.submit();
 
-      expect(component.sending()).toBe(true);
+      expect(component.sending()).toBe(false);
     });
 
     it("submit_pendantLEnvoi_annonceLEtapeEnCours", () => {

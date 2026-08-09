@@ -22,7 +22,7 @@ describe('ForgotPin', () => {
   // 23 chiffres : le préfixe d'agence « 10005 » suivi des 18 chiffres que le
   // client saisit à la vérification de compte.
   const COMPTE_VALIDE = '10005123456789012345678';
-  const MESSAGE_PAR_DEFAUT = 'Impossible d’envoyer la demande.';
+  const MESSAGE_PAR_DEFAUT = 'Impossible d’envoyer la demande. Réessayez.';
 
   beforeEach(() => {
     requestReset = vi.fn().mockReturnValue(
@@ -178,7 +178,10 @@ describe('ForgotPin', () => {
 
       component.submit();
 
-      expect(component.message()).toBe('Aucun compte ne correspond à ce numéro.');
+      // L'échec s'écrit dans `error()` et non dans `message()` : le second est
+      // réservé au succès, et c'est lui qui referme l'écran.
+      expect(component.error()).toBe('Aucun compte ne correspond à ce numéro.');
+      expect(component.message()).toBeNull();
     });
 
     it('submit_echecSansMessage_afficheUnLibelleParDefaut', () => {
@@ -190,7 +193,7 @@ describe('ForgotPin', () => {
 
       component.submit();
 
-      expect(component.message()).toBe(MESSAGE_PAR_DEFAUT);
+      expect(component.error()).toBe(MESSAGE_PAR_DEFAUT);
     });
 
     it("submit_echec_neMarquePasLaDemandeCommeEnvoyee", () => {
@@ -205,21 +208,13 @@ describe('ForgotPin', () => {
       expect(component.submitted()).toBe(false);
     });
 
-    it("submit_echec_retireLeBoutonEtInterditToutNouvelEssai", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // Le gabarit choisit entre le bouton et le message sur le seul contenu de
-      // `message()`, sans regarder `submitted()`, qui est pourtant renseigné et
-      // n'est lu nulle part. Or le chemin d'erreur écrit dans ce même
-      // `message()` : une panne réseau passagère fait donc disparaître le
-      // bouton d'envoi exactement comme un succès.
-      //
-      // Le client lit « Service indisponible » et n'a plus aucun moyen de
-      // réessayer, sur un écran dont c'est la seule action, alors qu'il est déjà
-      // dans la situation d'avoir perdu son code PIN.
-      //
-      // CE QUI DEVRAIT ÊTRE : l'alternative doit reposer sur `submitted()`, et
-      // le message d'erreur s'afficher à côté du bouton, qui reste disponible.
+    it("submit_echec_conserveLeBoutonPourUnNouvelEssai", () => {
+      // Le gabarit arbitrait entre bouton et message sur le seul contenu de
+      // `message()`, où le chemin d'erreur écrivait lui aussi : une panne
+      // réseau passagère faisait donc disparaître le bouton d'envoi exactement
+      // comme un succès. Le client lisait « Service indisponible » et n'avait
+      // plus aucun moyen de réessayer, sur l'unique action de l'écran, alors
+      // qu'il est déjà dans la situation d'avoir perdu son code PIN.
       requestReset.mockReturnValue(throwError(() => ({ error: { message: 'Service indisponible' } })));
       const fixture = ouvrirLEcran();
       fixture.componentInstance.account.setValue(COMPTE_VALIDE);
@@ -228,19 +223,15 @@ describe('ForgotPin', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.submitted()).toBe(false);
-      expect(fixture.nativeElement.querySelector('button.primary-button')).toBeNull();
+      expect(fixture.nativeElement.querySelector('button.primary-button')).not.toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Service indisponible');
     });
 
-    it("submit_succesSansMessage_laisseLEcranStrictementInchange", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // Revers du même choix : quand le serveur répond sans texte, `message()`
-      // reste vide, l'écran continue d'afficher le bouton et rien n'indique que
-      // la demande est partie. Le client, persuadé que son clic n'a rien fait,
-      // recommence et déclenche autant de procédures de réinitialisation.
-      //
-      // CE QUI DEVRAIT ÊTRE : `submitted()` doit gouverner l'affichage, avec un
-      // texte de confirmation par défaut lorsque le serveur n'en fournit pas.
+    it("submit_succesSansMessage_confirmeQuandMemeAuClient", () => {
+      // Revers du même choix : quand le serveur répondait sans texte, l'écran
+      // continuait d'afficher le bouton et rien n'indiquait que la demande
+      // était partie. Le client, persuadé que son clic n'avait rien fait,
+      // recommençait et ouvrait autant de procédures de réinitialisation.
       requestReset.mockReturnValue(
         of({ data: { emailSent: true, requiresBranchVisit: false, message: '' } }),
       );
@@ -251,21 +242,15 @@ describe('ForgotPin', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.submitted()).toBe(true);
-      expect(fixture.nativeElement.querySelector('.notice')).toBeNull();
-      expect(fixture.nativeElement.querySelector('button.primary-button')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.notice')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('button.primary-button')).toBeNull();
     });
 
-    it("submit_demandeEncoreEnCours_enEnvoieUneSeconde", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
-      //
-      // Aucun verrou ne protège l'envoi : tant que la réponse n'est pas arrivée,
-      // `message()` reste vide, le bouton reste donc affiché et actif, et chaque
-      // clic part vers le serveur. Sur une connexion lente, celle-là même qui
-      // pousse à recliquer, le client ouvre autant de procédures qu'il a de
-      // clics et invalide le jeton de chacune par la suivante.
-      //
-      // CE QUI DEVRAIT ÊTRE : un signal d'envoi en cours, comme sur les autres
-      // écrans du projet, qui désactive le bouton jusqu'à la réponse.
+    it("submit_demandeEncoreEnCours_nEnEnvoiePasUneSeconde", () => {
+      // Sans verrou, chaque clic partait vers le serveur tant que la réponse
+      // n'était pas arrivée. Sur une connexion lente, celle-là même qui pousse
+      // à recliquer, le client ouvrait autant de procédures qu'il avait de
+      // clics et invalidait le jeton de chacune par la suivante.
       const enAttente = new Subject();
       requestReset.mockReturnValue(enAttente);
       const component = TestBed.createComponent(ForgotPin).componentInstance;
@@ -275,7 +260,7 @@ describe('ForgotPin', () => {
       component.submit();
       component.submit();
 
-      expect(requestReset).toHaveBeenCalledTimes(3);
+      expect(requestReset).toHaveBeenCalledTimes(1);
     });
   });
 });

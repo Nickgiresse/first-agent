@@ -167,29 +167,19 @@ describe('Welcome', () => {
       expect(applyFromLink).not.toHaveBeenCalled();
     });
 
-    it("lienRefuse_conserveNeanmoinsLeJetonQuiFeraEchouerLaFinalisation", () => {
-      // DÉFAUT DE PRODUCTION, comportement documenté tel qu'il est aujourd'hui.
+    it("lienRefuse_neConserveAucunJetonQuiFeraitEchouerLaFinalisation", () => {
+      // Le jeton était enregistré AVANT vérification et rien ne l'effaçait en
+      // cas d'échec. Le client poursuivait un parcours d'apparence normale,
+      // franchissait le compte, le PIN, la pièce d'identité, la vivacité et les
+      // conditions générales, puis la finalisation renvoyait ce jeton périmé au
+      // WhatsApp banking : écriture refusée, transaction annulée, tout le
+      // travail perdu au dernier écran.
       //
-      // Le jeton est enregistré AVANT d'être vérifié, et rien ne l'efface quand
-      // la vérification échoue. Le client poursuit alors un parcours qui semble
-      // normal, franchit la vérification du compte, le code PIN, la pièce
-      // d'identité, la vivacité et les conditions générales, puis la
-      // finalisation renvoie ce jeton périmé au WhatsApp banking. L'écriture y
-      // est refusée, la transaction est annulée côté banque, et tout le travail
-      // du client est perdu au dernier écran.
-      //
-      // Le commentaire du composant annonce pourtant l'inverse : « le parcours
-      // standard reste accessible ». Il l'est en apparence seulement, car le
-      // parcours sans lien, lui, se termine bien : c'est la présence du jeton
-      // invalide qui déclenche l'envoi voué à l'échec.
-      //
-      // CE QUI DEVRAIT ÊTRE : l'échec de la vérification doit effacer le jeton
-      // conservé, pour que le client bascule réellement sur le parcours sans
-      // lien au lieu d'un parcours qui échouera à la fin.
+      // Le parcours ouvert sans lien du tout, lui, aboutissait : c'était la
+      // présence du jeton invalide qui provoquait l'échec.
       ouvrirLEcran({ t: JETON });
 
-      expect(setLinkToken).toHaveBeenCalledWith(JETON);
-      expect(setLinkToken).toHaveBeenCalledTimes(1);
+      expect(setLinkToken).not.toHaveBeenCalled();
     });
   });
 });
