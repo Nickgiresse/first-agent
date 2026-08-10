@@ -127,6 +127,48 @@ Un `GET` sur `/api/v1/accounts/verify` rend 500 : c'est le comportement du
 backend sur un point d'entrée qui attend un POST, identique sur le parcours
 précédent. Ce n'est pas un défaut du déploiement.
 
+## Piège : les origines CORS
+
+Le navigateur joint un en-tête `Origin` à toute requête POST, **y compris en
+même origine**. Le backend le confronte à sa liste d'origines autorisées ; un
+sous-domaine absent de cette liste reçoit un 403 « Invalid CORS request », que
+le parcours affiche sous la forme trompeuse d'une erreur d'analyse JSON
+(« Unexpected token 'I' … is not valid JSON »), parce qu'il tente de lire comme
+du JSON un corps qui est du texte brut.
+
+**Ce défaut ne se voit pas en ligne de commande.** `curl` n'envoie pas d'en-tête
+`Origin`, donc aucun contrôle ne se déclenche et le test passe. Il n'apparaît
+que dans un navigateur. Les vérifications de mise en service du 09/08 étaient
+toutes vertes alors que le parcours était inutilisable.
+
+À l'ouverture d'un sous-domaine, ajouter l'origine côté backend, dans
+`docker-compose.deploy.liveness.yml`, service `onboarding` :
+
+    APP_CORS_ALLOWED_ORIGINS: https://onboarding.afb-firstagent.com,...,https://onboarding-v2.afb-firstagent.com
+
+puis recréer le seul service concerné :
+
+    docker compose -p first-agent -f docker-compose.deploy.yml \
+      -f docker-compose.deploy.extra.yml -f docker-compose.deploy.liveness.yml \
+      up -d --no-deps onboarding
+
+Vérifier AVEC l'en-tête, seul contrôle qui vaille :
+
+    curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+      -H 'Content-Type: application/json' \
+      -H 'Origin: https://onboarding-v2.afb-firstagent.com' \
+      -d '{"accountSuffix":"000010000007582781"}' \
+      http://localhost:8484/api/v1/accounts/verify
+
+Attendu : 200, et un en-tête `Access-Control-Allow-Origin` en réponse.
+
+⚠️ Cette variable vit dans `daniellandry/firstagent-backend-afriland`, un dépôt
+distinct de celui-ci. Elle est appliquée sur le serveur mais **n'y est pas
+commitée** : un `git pull` la perdrait.
+
+Dans le présent dépôt, `CorsConfiguration` lit désormais
+`app.cors.allowed-origins` au lieu d'une liste figée à la compilation.
+
 ## Ce que la CSP autorise
 
 La politique servie est plus stricte que celle du conteneur précédent : les
