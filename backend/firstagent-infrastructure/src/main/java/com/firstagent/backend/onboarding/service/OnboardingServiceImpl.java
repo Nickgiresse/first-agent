@@ -88,8 +88,24 @@ public class OnboardingServiceImpl implements OnboardingService {
    *
    * <p>Réglable sans redéploiement : c'est un arbitrage entre le risque d'usurpation et le nombre
    * de clients renvoyés en agence, et il appartient au métier de le situer.
+   *
+   * <h2>Attention à l'échelle : ce n'est pas un pourcentage</h2>
+   *
+   * <p>Le score reçu est une similarité cosinus entre deux vecteurs ArcFace, multipliée par 100 par
+   * {@code PythonVisionFaceMatchProvider}. Sa plage utile n'est pas 0 à 100 : un appariement
+   * légitime entre la photo d'une pièce d'identité — imprimée, plastifiée, souvent ancienne — et un
+   * selfie se situe en pratique entre 45 et 70, et dépasse rarement 80.
+   *
+   * <p>La valeur avait d'abord été fixée à 75, par analogie avec les scores de confiance bornés que
+   * rendent d'autres moteurs. Sur cette échelle, elle aurait envoyé en agence la quasi-totalité des
+   * dossiers légitimes : la « zone grise » qu'elle prétendait couvrir était en réalité la zone
+   * nominale.
+   *
+   * <p>55 laisse passer un appariement franc et ne retient que les cas réellement douteux. Le
+   * chiffre reste à confirmer sur un jeu de paires réelles, mêmes personnes et personnes
+   * différentes : aucune valeur n'est juste sans cette mesure.
    */
-  @Value("${app.identity.face-confidence-threshold:75}")
+  @Value("${app.identity.face-confidence-threshold:55}")
   private double faceConfidenceThreshold;
 
   @Value("${app.mail.from-address}")

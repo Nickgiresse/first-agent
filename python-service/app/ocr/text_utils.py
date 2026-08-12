@@ -10,10 +10,26 @@ def normalize_line(line: str) -> str:
 
 
 def clean_name(value: str | None) -> str | None:
+    """Nettoie un nom lu sur la pièce, sans souder deux mots.
+
+    Le caractère parasite est remplacé par une ESPACE et non supprimé. La
+    nuance décide du résultat : l'OCR rend parfois « DANIEL.LANDRY » ou
+    « DANIEL2LANDRY » là où la carte porte « DANIEL LANDRY », le séparateur
+    ayant été lu comme un point, un deux-points ou un chiffre. Une suppression
+    pure soudait alors les deux prénoms en « DANIELLANDRY », qui ne correspond
+    plus à rien — ni au titulaire du compte, ni à ce que le client saisit.
+
+    Le défaut était intermittent, et c'est ce qui le rendait difficile à
+    reproduire : lorsqu'une espace subsistait à côté du parasite, le nom
+    ressortait correct.
+
+    L'implémentation du bot procédait déjà ainsi ; seule celle-ci divergeait.
+    """
     if not value:
         return None
-    cleaned = _NAME_NOISE_PATTERN.sub("", value.upper()).strip()
-    return cleaned or None
+    cleaned = _NAME_NOISE_PATTERN.sub(" ", value.upper())
+    # Le remplacement peut créer des espaces multiples ou en bordure.
+    return normalize_line(cleaned) or None
 
 
 def to_date(day_str: str, month_str: str, year_str: str) -> date | None:
