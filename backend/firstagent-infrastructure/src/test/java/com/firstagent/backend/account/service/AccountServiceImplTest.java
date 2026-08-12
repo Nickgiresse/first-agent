@@ -15,7 +15,9 @@ import com.firstagent.backend.common.exception.AccountNotFoundException;
 import com.firstagent.backend.common.exception.BusinessException;
 import com.firstagent.backend.common.exception.TypeErreurMetier;
 import com.firstagent.backend.common.security.SecureSessionTokenGenerator;
+import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
+import com.firstagent.backend.onboarding.repository.CustomerRepository;
 import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
 import com.firstagent.backend.whatsappbanking.client.WhatsAppBankingClient;
 import java.util.Map;
@@ -45,6 +47,7 @@ class AccountServiceImplTest {
   private static final String TELEPHONE = "+237685445511";
 
   @Mock private BankAccountRepository bankAccountRepository;
+  @Mock private CustomerRepository customerRepository;
   @Mock private OnboardingSessionRepository onboardingSessionRepository;
   @Mock private SecureSessionTokenGenerator sessionTokenGenerator;
   @Mock private WhatsAppBankingClient whatsAppBankingClient;
@@ -56,6 +59,7 @@ class AccountServiceImplTest {
     service =
         new AccountServiceImpl(
             bankAccountRepository,
+            customerRepository,
             onboardingSessionRepository,
             sessionTokenGenerator,
             whatsAppBankingClient);
@@ -265,5 +269,57 @@ class AccountServiceImplTest {
       assertThat(reponse.getFirstName()).isEqualTo("DANIEL LANDRY");
       assertThat(reponse.getLastName()).isEqualTo("DZANGUE");
     }
+  }
+
+  @Test
+  @DisplayName("un compte déjà rattaché à un client est refusé dès le premier écran")
+  void verifyAccount_compteDejaUtilise_estRefuse() {
+    // Sans ce contrôle, le parcours se rejouait entièrement : le client
+    // refaisait KYC, vivacité et conditions générales pour se heurter à
+    // l'unicité au tout dernier écran, après avoir tout fourni. Pire, la
+    // seconde inscription écrasait la première, et avec elle son code PIN.
+    when(whatsAppBankingClient.readAccount(null, NUMERO_COMPLET)).thenReturn(null);
+    when(bankAccountRepository.findByAccountNumber(NUMERO_COMPLET))
+        .thenReturn(Optional.of(compte(true, TELEPHONE)));
+    when(customerRepository.findByBankAccount_AccountNumber(NUMERO_COMPLET))
+        .thenReturn(Optional.of(Customer.builder().build()));
+
+    assertThatThrownBy(() -> service.verifyAccount(demande(TELEPHONE)))
+        .isInstanceOf(BusinessException.class)
+        .hasMessageContaining("déjà")
+        // Le message oriente vers la bonne action plutôt que de constater un
+        // refus : un client qui a oublié son PIN doit le réinitialiser, pas
+        // recommencer une inscription qui échouera.
+        .hasMessageContaining("PIN oublié");
+  }
+
+  @Test
+  @DisplayName("aucune session n'est ouverte pour un compte déjà utilisé")
+  void verifyAccount_compteDejaUtilise_nOuvreAucuneSession() {
+    // Une session ouverte donnerait un jeton valide trente minutes sur un
+    // compte auquel le demandeur n'a pas à accéder.
+    when(whatsAppBankingClient.readAccount(null, NUMERO_COMPLET)).thenReturn(null);
+    when(bankAccountRepository.findByAccountNumber(NUMERO_COMPLET))
+        .thenReturn(Optional.of(compte(true, TELEPHONE)));
+    when(customerRepository.findByBankAccount_AccountNumber(NUMERO_COMPLET))
+        .thenReturn(Optional.of(Customer.builder().build()));
+
+    assertThatThrownBy(() -> service.verifyAccount(demande(TELEPHONE)))
+        .isInstanceOf(BusinessException.class);
+
+    verify(onboardingSessionRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("un compte encore libre poursuit normalement")
+  void verifyAccount_compteLibre_poursuit() {
+    when(whatsAppBankingClient.readAccount(null, NUMERO_COMPLET)).thenReturn(null);
+    when(bankAccountRepository.findByAccountNumber(NUMERO_COMPLET))
+        .thenReturn(Optional.of(compte(true, TELEPHONE)));
+    when(customerRepository.findByBankAccount_AccountNumber(NUMERO_COMPLET))
+        .thenReturn(Optional.empty());
+    when(sessionTokenGenerator.generate()).thenReturn("jeton");
+
+    assertThat(service.verifyAccount(demande(TELEPHONE)).isEligible()).isTrue();
   }
 }

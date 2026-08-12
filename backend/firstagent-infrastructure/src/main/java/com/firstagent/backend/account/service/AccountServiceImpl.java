@@ -10,6 +10,7 @@ import com.firstagent.backend.common.exception.BusinessException;
 import com.firstagent.backend.common.exception.TypeErreurMetier;
 import com.firstagent.backend.common.security.SecureSessionTokenGenerator;
 import com.firstagent.backend.onboarding.entity.OnboardingSession;
+import com.firstagent.backend.onboarding.repository.CustomerRepository;
 import com.firstagent.backend.onboarding.repository.OnboardingSessionRepository;
 import com.firstagent.backend.whatsappbanking.client.WhatsAppBankingClient;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ public class AccountServiceImpl implements AccountService {
   private static final long SESSION_DURATION_MILLIS = 30 * 60 * 1000L; // 30 minutes
 
   private final BankAccountRepository bankAccountRepository;
+  private final CustomerRepository customerRepository;
   private final OnboardingSessionRepository onboardingSessionRepository;
   private final SecureSessionTokenGenerator sessionTokenGenerator;
   private final WhatsAppBankingClient whatsAppBankingClient;
@@ -60,6 +62,26 @@ public class AccountServiceImpl implements AccountService {
       throw new BusinessException(
           "Ce compte n'est pas éligible à l'onboarding digital", TypeErreurMetier.INTERDIT);
     }
+
+    // Un compte déjà rattaché à un client ne peut pas être soumis une seconde
+    // fois. Sans ce contrôle, le parcours se rejouait entièrement sur un compte
+    // déjà actif : le client refaisait KYC, vivacité et CGU pour se heurter à
+    // l'unicité au tout dernier écran, après avoir tout fourni. Pire, une
+    // seconde inscription y écrasait la première, et avec elle le code PIN
+    // choisi précédemment.
+    //
+    // Le refus intervient donc au premier écran, avant toute collecte de
+    // donnée personnelle.
+    customerRepository
+        .findByBankAccount_AccountNumber(accountNumber)
+        .ifPresent(
+            client -> {
+              throw new BusinessException(
+                  "Ce compte dispose déjà d'un accès au service. Si vous avez oublié votre code "
+                      + "PIN, utilisez « Code PIN oublié » plutôt que de recommencer l'inscription.",
+                  TypeErreurMetier.CONFLIT,
+                  "RG-ONB-010");
+            });
 
     // Contrôle d'appartenance : le numéro qui réalise le parcours doit être
     // celui déclaré sur le compte au référentiel bancaire. Le bot connaît
