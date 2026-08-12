@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.firstagent.backend.account.entity.BankAccount;
 import com.firstagent.backend.audit.model.EvenementAudit;
 import com.firstagent.backend.audit.port.JournalAudit;
+import com.firstagent.backend.common.enums.CustomerStatus;
 import com.firstagent.backend.common.enums.DocumentType;
 import com.firstagent.backend.common.enums.FaceVerificationStatus;
 import com.firstagent.backend.common.enums.LivenessStatus;
@@ -437,6 +438,33 @@ class OnboardingServiceImplTest {
     Customer client = clientEnregistre();
     assertThat(client.isRequiresManualReview()).isTrue();
     assertThat(client.getManualReviewReason()).contains("agence");
+  }
+
+  @Test
+  @DisplayName("un dossier sans réserve ouvre l'accès au service")
+  void completion_sansReserve_clientActif() {
+    dossierPretAvecSimilarite(95.0);
+
+    service.completeOnboarding(sessionToken, null);
+
+    Customer client = clientEnregistre();
+    assertThat(client.getStatus()).isEqualTo(CustomerStatus.USER);
+    assertThat(client.getStatus().estActif()).isTrue();
+  }
+
+  @Test
+  @DisplayName("un dossier en révision n'ouvre pas l'accès au service")
+  void completion_enRevision_clientInactif() {
+    // Le drapeau de révision existait déjà, mais n'empêchait rien : le dossier
+    // naissait actif et le client utilisait le service pendant qu'on attendait
+    // précisément la confirmation de son identité.
+    dossierPretAvecSimilarite(62.0);
+
+    service.completeOnboarding(sessionToken, null);
+
+    Customer client = clientEnregistre();
+    assertThat(client.getStatus()).isEqualTo(CustomerStatus.PENDING_REVIEW);
+    assertThat(client.getStatus().estActif()).isFalse();
   }
 
   @Test

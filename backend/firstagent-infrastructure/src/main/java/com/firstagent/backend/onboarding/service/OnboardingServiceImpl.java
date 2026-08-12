@@ -396,6 +396,13 @@ public class OnboardingServiceImpl implements OnboardingService {
         stagingFace.getTargetQualityScore(),
         stagingFace.getSimilarityScore());
 
+    // Le statut découle de la révision, il n'est pas décidé indépendamment.
+    // Auparavant tout dossier naissait USER, donc actif : le drapeau de
+    // révision existait mais n'empêchait rien, et un dossier en attente de
+    // confirmation d'identité ouvrait l'accès au service dans l'intervalle.
+    customer.setStatus(
+        customer.isRequiresManualReview() ? CustomerStatus.PENDING_REVIEW : CustomerStatus.USER);
+
     // Source de vérité = WhatsApp banking. On y pousse le client AVANT toute écriture locale :
     // fail-secure — si l'écriture dans la source de vérité échoue, la transaction (@Transactional)
     // est annulée, rien n'est enregistré localement et le staging reste intact pour un nouvel
