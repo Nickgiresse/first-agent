@@ -121,6 +121,9 @@ class OnboardingServiceImplTest {
             livenessResultRepository,
             onboardingSessionRepository);
     ReflectionTestUtils.setField(service, "manualReviewThreshold", 70.0);
+    // Seuil de confiance faciale : sans injection il vaudrait zero, et aucune
+    // ressemblance faible ne serait jamais signalee.
+    ReflectionTestUtils.setField(service, "faceConfidenceThreshold", 75.0);
     ReflectionTestUtils.setField(service, "fromAddress", "onboarding@afrilandfirstbank.com");
   }
 
@@ -375,13 +378,78 @@ class OnboardingServiceImplTest {
 
   private StagingFaceVerificationResult stagedFace(
       OnboardingSession session, Double targetQualityScore) {
+    return stagedFace(session, targetQualityScore, 95.0);
+  }
+
+  private StagingFaceVerificationResult stagedFace(
+      OnboardingSession session, Double targetQualityScore, Double similarityScore) {
     return StagingFaceVerificationResult.builder()
         .onboardingSession(session)
         .provider("PYTHON_VISION")
         .status(FaceVerificationStatus.VERIFIED)
-        .similarityScore(95.0)
+        .similarityScore(similarityScore)
         .targetQualityScore(targetQualityScore)
         .build();
+  }
+
+  /** Prépare un dossier complet, en maîtrisant la seule similarité faciale. */
+  private void dossierPretAvecSimilarite(double similarite) {
+    OnboardingSession session = termsAcceptedSession();
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+    when(stagingDocumentRepository.findByOnboardingSession_Id(sessionId))
+        .thenReturn(stagedDocuments(session));
+    when(stagingOcrResultRepository.findByOnboardingSession_Id(sessionId))
+        .thenReturn(Optional.of(stagedOcr(session, 85.0)));
+    when(stagingFaceVerificationResultRepository.findByOnboardingSession_Id(sessionId))
+        .thenReturn(Optional.of(stagedFace(session, 90.0, similarite)));
+    when(stagingLivenessResultRepository.findByOnboardingSession_Id(sessionId))
+        .thenReturn(Optional.of(stagedLiveness(session)));
+  }
+
+  private Customer clientEnregistre() {
+    ArgumentCaptor<Customer> captor = ArgumentCaptor.forClass(Customer.class);
+    verify(customerRepository).save(captor.capture());
+    return captor.getValue();
+  }
+
+  @Test
+  @DisplayName("une ressemblance faciale nette n'appelle aucune révision")
+  void completion_ressemblanceNette_aboutitSansReserve() {
+    dossierPretAvecSimilarite(95.0);
+
+    service.completeOnboarding(sessionToken, null);
+
+    assertThat(clientEnregistre().isRequiresManualReview()).isFalse();
+  }
+
+  @Test
+  @DisplayName("une ressemblance faible renvoie le dossier en agence")
+  void completion_ressemblanceFaible_renvoieEnAgence() {
+    // Le service de vision a ACCEPTÉ le rapprochement : le parcours va jusqu'au
+    // bout. Mais accepté de justesse n'est pas certain, et c'est exactement là
+    // que se logent les cas douteux : ressemblance familiale, photo ancienne,
+    // éclairage défavorable. Les approuver automatiquement reviendrait à
+    // trancher à la place d'un humain.
+    dossierPretAvecSimilarite(62.0);
+
+    service.completeOnboarding(sessionToken, null);
+
+    Customer client = clientEnregistre();
+    assertThat(client.isRequiresManualReview()).isTrue();
+    assertThat(client.getManualReviewReason()).contains("agence");
+  }
+
+  @Test
+  @DisplayName("le dossier est enregistré malgré la réserve, il n'est pas rejeté")
+  void completion_ressemblanceFaible_enregistreQuandMeme() {
+    // Rejeter obligerait le client à tout recommencer alors que rien ne prouve
+    // une fraude. Le dossier existe, il attend seulement une confirmation.
+    dossierPretAvecSimilarite(62.0);
+
+    OnboardingCompletionResponse reponse = service.completeOnboarding(sessionToken, null);
+
+    assertThat(reponse.isRequiresManualReview()).isTrue();
+    verify(customerRepository).save(any(Customer.class));
   }
 
   private StagingLivenessResult stagedLiveness(OnboardingSession session) {

@@ -79,6 +79,19 @@ public class OnboardingServiceImpl implements OnboardingService {
   @Value("${app.quality.manual-review-threshold:70}")
   private double manualReviewThreshold;
 
+  /**
+   * Seuil de CONFIANCE de la comparaison faciale, distinct du seuil d'ACCEPTATION.
+   *
+   * <p>Le service de vision applique son propre seuil : en deçà, il refuse et le parcours s'arrête.
+   * Celui-ci est plus exigeant et ne refuse rien : entre les deux, le dossier aboutit mais part en
+   * révision, l'identité devant être confirmée par un conseiller.
+   *
+   * <p>Réglable sans redéploiement : c'est un arbitrage entre le risque d'usurpation et le nombre
+   * de clients renvoyés en agence, et il appartient au métier de le situer.
+   */
+  @Value("${app.identity.face-confidence-threshold:75}")
+  private double faceConfidenceThreshold;
+
   @Value("${app.mail.from-address}")
   private String fromAddress;
 
@@ -378,7 +391,10 @@ public class OnboardingServiceImpl implements OnboardingService {
             .build();
 
     applyManualReview(
-        customer, stagingOcr.getDocumentQualityScore(), stagingFace.getTargetQualityScore());
+        customer,
+        stagingOcr.getDocumentQualityScore(),
+        stagingFace.getTargetQualityScore(),
+        stagingFace.getSimilarityScore());
 
     // Source de vérité = WhatsApp banking. On y pousse le client AVANT toute écriture locale :
     // fail-secure — si l'écriture dans la source de vérité échoue, la transaction (@Transactional)
@@ -548,12 +564,25 @@ public class OnboardingServiceImpl implements OnboardingService {
   }
 
   /**
-   * Un score de qualité (document ou selfie) sous le seuil ne bloque pas l'inscription : le dossier
-   * est enregistré jusqu'au bout, seulement marqué pour révision manuelle par l'agence plutôt que
-   * rejeté ou approuvé automatiquement.
+   * Un score sous le seuil ne bloque pas l'inscription : le dossier est enregistré jusqu'au bout,
+   * seulement marqué pour révision manuelle par l'agence plutôt que rejeté ou approuvé
+   * automatiquement.
+   *
+   * <p>TROIS BANDES POUR LA COMPARAISON FACIALE, ET NON DEUX. Le service de vision décide seul si
+   * les visages correspondent, et un rapprochement refusé interrompt le parcours plus tôt. Restait
+   * une zone grise : un rapprochement accepté de justesse valait auparavant approbation pleine et
+   * entière, au même titre qu'une correspondance nette.
+   *
+   * <p>Or c'est précisément là que se logent les cas douteux : ressemblance familiale, photo
+   * ancienne, éclairage défavorable. Les traiter comme des correspondances certaines revient à
+   * décider automatiquement ce qu'un humain devrait trancher. Au-dessus du seuil d'acceptation mais
+   * en deçà du seuil de confiance, le dossier part donc en agence.
    */
   private void applyManualReview(
-      Customer customer, Double documentQualityScore, Double faceQualityScore) {
+      Customer customer,
+      Double documentQualityScore,
+      Double faceQualityScore,
+      Double faceSimilarityScore) {
     List<String> reasons = new ArrayList<>();
 
     if (documentQualityScore != null && documentQualityScore < manualReviewThreshold) {
@@ -561,6 +590,13 @@ public class OnboardingServiceImpl implements OnboardingService {
           "Qualité du document d'identité insuffisante ("
               + Math.round(documentQualityScore)
               + "%)");
+    }
+
+    if (faceSimilarityScore != null && faceSimilarityScore < faceConfidenceThreshold) {
+      reasons.add(
+          "Ressemblance faciale insuffisamment nette ("
+              + Math.round(faceSimilarityScore)
+              + "%) : identité à confirmer en agence");
     }
 
     if (faceQualityScore != null && faceQualityScore < manualReviewThreshold) {
