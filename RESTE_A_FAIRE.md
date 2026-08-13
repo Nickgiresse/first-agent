@@ -33,7 +33,8 @@ fait, les corrections d'ici ne servent personne.
 
 | Défaut | État |
 |---|---|
-| Vivacité non liée au visage comparé (parcours bot) | corrigé, **non redémarré** |
+| Vivacité non liée au visage comparé (parcours bot) | corrigé et reporté dans la copie déployée, **non redémarré** |
+| Verrou du PIN attaché au lien et non au compte | corrigé (redemander un lien remettait la force brute à zéro) |
 | Vivacité non liée au visage comparé (parcours Java) | corrigé, 15 tests, **non déployé** |
 | Défi de vivacité parfois exclusivement rotatif | corrigé (action déformante garantie) |
 | Récépissé bloqué à la relecture, sans champ pour débloquer | corrigé (Next.js) |
@@ -106,20 +107,24 @@ vérifiée n'offre à son titulaire aucun moyen de récupération.
 
 - **Déployer `first-agent` à la place du backend actuel.** C'est le point
   bloquant : tout ce qui précède est écrit et testé, rien n'est en service.
-- **Reporter la vivacité du bot dans la copie déployée.** Le bot WhatsApp existe
-  en deux exemplaires : `firstagent-demo` (source, où la correction est écrite et
-  testée, 13 tests) et `firstagent-backend-afriland/python-bot/` (copie
-  déployée, qui ne l'a pas). Le remote GitHub de `firstagent-demo` répond
-  « Repository not found », donc ses commits restent locaux. Tant que le report
-  n'est pas fait, la faille reste ouverte en production sur ce parcours.
+- **Redémarrer les services du parcours bot.** Le report dans la copie déployée
+  (`firstagent-backend-afriland/python-bot/`) est fait et poussé, mais rien ne
+  tourne encore dessus. Ordre impératif : `face-verify` (8010) **avant** le bot
+  (8000).
 - **Calibrer les seuils sur données réelles** : liaison de vivacité (0,60),
   comparaison faciale (0,40), revue manuelle (70). Aucun n'a été mesuré.
 - **Modification d'un message WhatsApp par le client** : aucune déduplication sur
   `message_id`, aucun traitement des événements d'édition. WhatsApp permet
   l'édition, donc le cas se produira.
-- **Keycloak** : `postLogoutUris` ne contient pas
-  `https://backoffice.afb-firstagent.com/*`, d'où l'erreur « URI de redirection
-  invalide » à la déconnexion. Deux entrées obsolètes traînent également.
+- **Keycloak, déconnexion : corrigé, à confirmer en navigateur.** Le diagnostic
+  initial était faux. Le client `firstagent-backoffice` du royaume `afb` déclare
+  bien `https://backoffice.afb-firstagent.com/*`, et son attribut
+  `post.logout.redirect.uris` est **absent**, ce qui en Keycloak signifie
+  « suivre les `redirectUris` » : c'est le bon état, à laisser tel quel. Ce qui
+  manquait était `http://localhost:4300/*`, le port du back-office en
+  développement, où `keycloak.logout({ redirectUri: origin + '/' })` renvoyait
+  vers une URI non déclarée. Ajouté le 13/08/2026. Reste à confirmer dans un
+  navigateur, ce qu'aucun appel en ligne de commande ne remplace.
 - **Couverture frontend** vers 80 % (charte DSI), et registre Nexus interne
   injoignable depuis le VPS.
 
