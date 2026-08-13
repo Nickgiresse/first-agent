@@ -106,6 +106,12 @@ vérifiée n'offre à son titulaire aucun moyen de récupération.
 
 - **Déployer `first-agent` à la place du backend actuel.** C'est le point
   bloquant : tout ce qui précède est écrit et testé, rien n'est en service.
+- **Reporter la vivacité du bot dans la copie déployée.** Le bot WhatsApp existe
+  en deux exemplaires : `firstagent-demo` (source, où la correction est écrite et
+  testée, 13 tests) et `firstagent-backend-afriland/python-bot/` (copie
+  déployée, qui ne l'a pas). Le remote GitHub de `firstagent-demo` répond
+  « Repository not found », donc ses commits restent locaux. Tant que le report
+  n'est pas fait, la faille reste ouverte en production sur ce parcours.
 - **Calibrer les seuils sur données réelles** : liaison de vivacité (0,60),
   comparaison faciale (0,40), revue manuelle (70). Aucun n'a été mesuré.
 - **Modification d'un message WhatsApp par le client** : aucune déduplication sur
