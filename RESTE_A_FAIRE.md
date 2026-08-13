@@ -110,21 +110,49 @@ Dockerfile ne le copiait pas : le tick échouait sur `ModuleNotFoundError` à
 chaque passage, et **aucune sauvegarde n'avait jamais tourné**. Corrigé,
 archive produite et restauration vérifiée (déchiffrement Fernet, 6 pièces KYC).
 
-Deux limites, à traiter par la DSI et non par du code :
+**La base est désormais sauvegardée.** Le module applicatif ne sait faire un
+instantané que d'une base SQLite ; celle du bot est PostgreSQL, et les données
+clients n'étaient donc couvertes par rien. Un `pg_dump` quotidien chiffré est en
+place côté hôte : `/usr/local/bin/firstagent-pg-backup.sh`, déclenché par le
+minuteur systemd `firstagent-backup.timer` à 02h17, rétention 30 jours, dépôt
+dans `/opt/backups/firstagent/db/`. Restauration vérifiée : l'archive se
+déchiffre et livre un dump PostgreSQL 16.14 valide.
 
-**La clé de chiffrement est à côté des archives qu'elle protège.**
-`/app/data/.backup_key` vit sur le volume qui porte aussi
-`/app/data/backups/`. Perdre le disque, c'est perdre les deux ensemble, et
-aucune archive n'est alors restaurable. Il faut copier cette clé dans un coffre
-**maintenant**, puis alimenter `BACKUP_ENCRYPTION_KEY` depuis ce coffre pour
-que le module cesse d'en générer une locale. À ne pas faire transiter par une
-conversation ni par un dépôt.
+`cron` est absent de cet hôte, d'où systemd. `Persistent=true` rattrape
+l'exécution manquée si la machine était arrêtée à l'heure prévue, ce que cron ne
+fait pas.
 
-**La base n'est pas sauvegardée.** Le module ne sait faire un instantané
-cohérent que d'une base SQLite ; celle du bot est PostgreSQL. L'archive contient
-les pièces KYC, pas les données clients, et son `LISEZMOI.txt` le déclare. Un
-`pg_dump` planifié côté hébergement reste à mettre en place : c'est aujourd'hui
-le vrai trou du plan de reprise.
+Chiffrement `openssl` et non Fernet, délibérément : le jour où l'on restaure, il
+ne faut dépendre ni de Python, ni du code applicatif, ni d'un conteneur en
+marche.
+
+```
+openssl enc -d -aes-256-cbc -pbkdf2 -pass file:/root/.firstagent-pgdump-pass \
+  -in <archive>.sql.gz.enc | gunzip | psql -U afribank afribank
+```
+
+**La clé ne vit plus sur le volume qu'elle protège.** Elle est passée dans
+`BACKUP_ENCRYPTION_KEY`, que le module lit en priorité et que la sauvegarde
+exclut. Le fichier `/app/data/.backup_key` a été retiré, mais seulement après
+avoir vérifié qu'une archive antérieure se déchiffrait toujours : l'inverse
+aurait rendu toutes les archives illisibles sur une valeur mal recopiée.
+
+### Ce qui reste, et qui ne se règle pas depuis cette machine
+
+**Tout est sur le même disque.** Les archives (`/opt/backups/firstagent/`), la
+clé Fernet (`/root/.firstagent-backup-key.retire-du-volume-20260813`) et la
+phrase de passe du dump (`/root/.firstagent-pgdump-pass`) vivent sur le serveur
+qu'elles sont censées protéger. La perte du disque emporte les sauvegardes ET
+de quoi les lire.
+
+Il faut donc, et ce sont les deux seules actions qui manquent :
+
+1. copier les deux secrets dans un coffre, hors de cette machine ;
+2. répliquer `/opt/backups/firstagent/` vers une destination externe (le script
+   est prêt à recevoir un `rsync` supplémentaire, ou `BACKUP_DIR_SECONDARY` côté
+   module pour les seules pièces KYC).
+
+Tant que ce n'est pas fait, il y a une sauvegarde mais pas de plan de reprise.
 
 ---
 
