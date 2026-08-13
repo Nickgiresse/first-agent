@@ -33,7 +33,7 @@ fait, les corrections d'ici ne servent personne.
 
 | Défaut | État |
 |---|---|
-| Vivacité non liée au visage comparé (parcours bot) | corrigé et reporté dans la copie déployée, **non redémarré** |
+| Vivacité non liée au visage comparé (parcours bot) | corrigé, reporté et **en service depuis le 13/08/2026** |
 | Verrou du PIN attaché au lien et non au compte | corrigé (redemander un lien remettait la force brute à zéro) |
 | Vivacité non liée au visage comparé (parcours Java) | corrigé, 15 tests, **non déployé** |
 | Défi de vivacité parfois exclusivement rotatif | corrigé (action déformante garantie) |
@@ -107,10 +107,14 @@ vérifiée n'offre à son titulaire aucun moyen de récupération.
 
 - **Déployer `first-agent` à la place du backend actuel.** C'est le point
   bloquant : tout ce qui précède est écrit et testé, rien n'est en service.
-- **Redémarrer les services du parcours bot.** Le report dans la copie déployée
-  (`firstagent-backend-afriland/python-bot/`) est fait et poussé, mais rien ne
-  tourne encore dessus. Ordre impératif : `face-verify` (8010) **avant** le bot
-  (8000).
+- ~~Mettre en service la vivacité du parcours bot~~ — **fait le 13/08/2026.**
+  Attention pour la prochaine fois : le code n'est **pas** monté depuis le
+  disque, il est figé dans les images. Un redémarrage ne change donc rien, il
+  faut reconstruire. Les images précédentes sont étiquetées
+  `20260813-liaison-vivacite` pour un retour arrière, et les fichiers remplacés
+  sauvegardés en `.avant-20260813-liaison-vivacite`.
+  Vérifié en service : `liveness_session_id` présent dans le schéma OpenAPI
+  servi par face-verify, 4 marqueurs dans le bot, conteneur sain, mode `review`.
 - **Calibrer les seuils sur données réelles** : liaison de vivacité (0,60),
   comparaison faciale (0,40), revue manuelle (70). Aucun n'a été mesuré.
 - **Modification d'un message WhatsApp par le client** : aucune déduplication sur
