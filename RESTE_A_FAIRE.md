@@ -103,7 +103,32 @@ vérifiée n'offre à son titulaire aucun moyen de récupération.
 
 ---
 
-## 3. Points ouverts
+## 3. Sauvegarde : en service, mais deux trous à combler
+
+Mise en service le 13/08/2026. Le module existait depuis son ajout mais le
+Dockerfile ne le copiait pas : le tick échouait sur `ModuleNotFoundError` à
+chaque passage, et **aucune sauvegarde n'avait jamais tourné**. Corrigé,
+archive produite et restauration vérifiée (déchiffrement Fernet, 6 pièces KYC).
+
+Deux limites, à traiter par la DSI et non par du code :
+
+**La clé de chiffrement est à côté des archives qu'elle protège.**
+`/app/data/.backup_key` vit sur le volume qui porte aussi
+`/app/data/backups/`. Perdre le disque, c'est perdre les deux ensemble, et
+aucune archive n'est alors restaurable. Il faut copier cette clé dans un coffre
+**maintenant**, puis alimenter `BACKUP_ENCRYPTION_KEY` depuis ce coffre pour
+que le module cesse d'en générer une locale. À ne pas faire transiter par une
+conversation ni par un dépôt.
+
+**La base n'est pas sauvegardée.** Le module ne sait faire un instantané
+cohérent que d'une base SQLite ; celle du bot est PostgreSQL. L'archive contient
+les pièces KYC, pas les données clients, et son `LISEZMOI.txt` le déclare. Un
+`pg_dump` planifié côté hébergement reste à mettre en place : c'est aujourd'hui
+le vrai trou du plan de reprise.
+
+---
+
+## 4. Points ouverts
 
 - **Déployer `first-agent` à la place du backend actuel.** C'est le point
   bloquant : tout ce qui précède est écrit et testé, rien n'est en service.
