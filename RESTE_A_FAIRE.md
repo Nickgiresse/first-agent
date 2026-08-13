@@ -1,142 +1,121 @@
 # Ce qui reste à faire, et ce qu'il faut savoir avant d'y toucher
 
-État au 12/08/2026. Ce document existe pour qu'une reprise n'ait pas à
+État au 13/08/2026. Ce document existe pour qu'une reprise n'ait pas à
 redécouvrir ce qui a déjà été établi, ni à refaire les erreurs déjà faites.
 
 ---
 
-## 1. La vivacité n'était liée à aucun visage — CORRIGÉ, RESTE À VÉRIFIER EN RÉEL
+## Le dépôt qui fait foi
 
-Le code est écrit et testé (13 tests dans `face-verify/tests/`, 13 dans
-`firstagent-demo/app/tests/test_kyc_liveness_binding.py`). **Il n'est pas
-encore en service** : les deux processus tournent toujours sur l'ancien code,
-voir « Mise en service » ci-dessous.
+**`Nickgiresse/first-agent`.** Décision de l'utilisateur : fait foi celui qui est
+conforme et qui porte toutes les fonctionnalités nécessaires. L'inventaire a
+vérifié les deux moitiés de ce critère.
 
-Ce qui a changé :
+Conformité : découpage hexagonal en 5 modules, migrations jusqu'à V19, journal
+d'audit scellé, masquage des données personnelles dans les traces, outillage
+qualité (Spotless, Checkstyle, SpotBugs, JaCoCo). Le déployé
+(`daniellandry/firstagent-backend-afriland`) est resté en module unique, V15,
+sans rien de tout cela.
 
-- `face-verify` mémorise l'empreinte ArcFace du visage qui joue le défi.
-  `/api/verify` et `/api/verify-video` acceptent `liveness_session_id` et
-  répondent un bloc `liveness` : le selfie soumis est-il bien ce visage ?
-  L'empreinte vit en mémoire, 30 min au plus, jamais sur disque.
-- Un **changement de visage en cours de défi** (une personne joue les actions,
-  une autre est présentée) renvoie `409 face_changed` et détruit la session.
-- Le bot refuse désormais un selfie qui n'est pas le visage du défi
-  (`face_mismatch` → `NO_MATCH`, trace d'audit d'usurpation).
-- **Le défi devient obligatoire** : sans vivacité liée, `KYC_LIVENESS_MODE`
-  décide — `review` (défaut, compte suspendu et conseiller), `strict` (refus),
-  `off` (comportement d'avant, à proscrire). Un selfie importé depuis la
-  pellicule ne peut donc plus activer un compte tout seul.
-- Le déclassement anti-photo ne dépend plus de la réussite du défi : réussir la
-  vivacité ne peut plus **affaiblir** la décision.
-- Chaque défi comporte au moins un clignement ou un sourire. Le tirage libre
-  donnait bien un défi exclusivement rotatif une fois sur cinq (4 combinaisons
-  sur 20), franchissable en pivotant un tirage papier.
+Complétude : le backend déployé n'expose qu'**un seul** endpoint absent d'ici,
+`POST /onboarding/kyc/skip`, et il a été **délibérément écarté** (voir plus bas).
+Cinq modifications vivaient uniquement sur le serveur, non commitées ; trois
+étaient déjà présentes ici (archivage des pièces KYC, méthode `archiveDocuments`,
+origine CORS configurable), les deux autres ont été portées (limite de
+téléversement, gestionnaire 413).
 
-**Mise en service — l'ordre compte.** Redémarrer `face-verify` (8010) **avant**
-le bot (8000) : tant que le microservice répond sans bloc `liveness`, le bot ne
-présume rien et envoie **tous** les dossiers en revue conseiller. C'est sans
-danger, mais ingérable pour les conseillers si l'ordre est inversé.
-
-**Reste à faire sur ce chemin :**
-
-- Vérifier le parcours complet sur caméra réelle (exige HTTPS : `getUserMedia`
-  ne fonctionne qu'en contexte sécurisé), et mesurer le taux de `REVIEW`
-  légitimes : si le seuil de liaison (0.60) est trop haut, les clients sont
-  renvoyés en agence pour rien.
-- Risque résiduel assumé : l'identité n'est contrôlée que sur 2 frames par
-  rafale (coût CPU). Mélanger deux visages *au milieu* d'une rafale reste
-  théoriquement possible — mais il faudrait que le tirage papier cligne des yeux.
-- Le service n'est plus sans état pendant un parcours (défis et empreintes en
-  mémoire du processus) : plusieurs réplicas exigeraient une affinité de session.
-- Le parcours Next.js/Java a sa **propre** vivacité (`python-service`, port 8001,
-  `/api/v1/liveness/...`), non touchée ici. La même liaison y manque
-  vraisemblablement : à auditer.
+**Il reste à déployer ce dépôt à la place de l'autre.** Tant que ce n'est pas
+fait, les corrections d'ici ne servent personne.
 
 ---
 
-## 2. L'écran de relecture bloque les récépissés
+## Ce qui a été corrigé, et où
 
-`OcrServiceImpl.confirmExtractedData` exige `paymentDate` pour un `RECEPISSE`,
-mais le formulaire Next.js n'expose que six champs et ne l'envoie jamais. Un
-récépissé produit donc systématiquement « La date de paiement est obligatoire »,
-sans champ pour la corriger : impasse définitive.
-
-Pour les titres provisoires et les passeports, la branche `else` écrase avec
-`null` des champs que l'OCR avait extraits — `birthPlace`, `fatherName`,
-`motherName`, `kitNumber`, `requestIdentifier`. Perte de données jusqu'en base.
-
-**Correction attendue.** Afficher les champs selon le `documentKind` renvoyé, et
-les retransmettre à la confirmation.
-
----
-
-## 3. Le jeton du lien WhatsApp n'est vérifié qu'à la toute fin
-
-`POST /api/v1/onboarding/link/verify` existe et fonctionne, mais **aucun écran
-ne l'appelle**. Le jeton est rangé en `sessionStorage` et n'est ressorti qu'à la
-finalisation. Un lien expiré ou déjà consommé fait donc échouer le parcours à
-l'écran des conditions générales, après le scan et la vivacité.
-
-Sans lien du tout, le parcours va au bout mais le versement vers la source de
-vérité est **silencieusement ignoré** : l'écran de réussite s'affiche alors que
-le client n'existe pas côté WhatsApp banking.
-
-**Correction attendue.** Vérifier le lien dès l'accueil, et décider explicitement
-du comportement en son absence.
-
----
-
-## 4. Aucune garde de session côté frontend
-
-La session dure 30 minutes et tout le parcours doit y tenir. Aucun écran ne
-vérifie la présence du jeton au montage : un rechargement après expiration
-laisse l'utilisateur sur un message d'erreur, sans redirection.
-
----
-
-## 5. Un contournement de KYC visible en production
-
-L'écran KYC expose un bouton **« Continuer sans e-mail (test) »**, câblé sur
-`POST /onboarding/kyc/skip`. C'est un contournement d'étape KYC, libellé
-« test », accessible à tout client. À masquer derrière un indicateur de
-configuration, ou à retirer une fois le SMTP fiable.
-
----
-
-## Divergence des dépôts — à trancher avant toute nouvelle correction
-
-Deux backends coexistent et **l'écart se creuse à chaque correction** :
-
-| | `Nickgiresse/first-agent` | `daniellandry/firstagent-backend-afriland` |
-|---|---|---|
-| Structure | 5 modules hexagonaux | module unique |
-| Migrations | V19 | V15 |
-| Journal d'audit scellé | présent | absent |
-| Déployé | non | **oui** |
-
-Le second est celui qui sert le parcours. Le premier porte tout le travail de
-conformité : journal d'audit, masquage des données personnelles dans les
-traces, correction du verrou anti-force-brute de l'OTP, refus d'un compte déjà
-utilisé, statut de dossier en révision.
-
-**Tant que ce point n'est pas réglé, toute correction apportée au premier ne
-sert personne**, et toute correction apportée au second est perdue au prochain
-rapprochement. C'est la décision la plus utile à prendre.
-
----
-
-## Ce qui a déjà été corrigé, pour ne pas le refaire
-
-| Défaut | Où |
+| Défaut | État |
 |---|---|
-| Limite de téléversement à 1 Mo, message opaque | déployé, vérifié en ligne |
+| Vivacité non liée au visage comparé (parcours bot) | corrigé, **non redémarré** |
+| Vivacité non liée au visage comparé (parcours Java) | corrigé, 15 tests, **non déployé** |
+| Défi de vivacité parfois exclusivement rotatif | corrigé (action déformante garantie) |
+| Récépissé bloqué à la relecture, sans champ pour débloquer | corrigé (Next.js) |
+| Champs du titre provisoire écrasés en base | corrigé (Next.js) |
+| Jeton du lien vérifié seulement à la fin | corrigé (Next.js) |
+| Aucune garde de session côté frontend | corrigé (Next.js) |
+| Contournement KYC visible en production | **retiré** |
+| Limite de téléversement à 1 Mo, message opaque | corrigé des deux côtés |
+| `application-prod.yml` faisait échouer le démarrage en profil prod | corrigé |
 | Numéro CNI lu dans le mauvais champ MRZ | déployé, vérifié en ligne |
-| Toute CNI classée « passeport » | `first-agent`, non déployé |
-| Prénoms collés par `clean_name` | `first-agent`, non déployé |
-| Seuil facial mal calibré à 75 | `first-agent`, ramené à 55 |
-| Champ « Lieu de naissance » retiré | déployé |
-| CORS du sous-domaine | déployé, non commité en amont |
-| Vivacité liée au visage du selfie | `face-verify` + `firstagent-demo`, **non redémarré** |
+| Toute CNI classée « passeport » | corrigé, non déployé |
+| Prénoms collés par `clean_name` | corrigé, non déployé |
+| Seuil facial mal calibré à 75 | ramené à 55 |
+| CORS du sous-domaine | déployé |
+
+---
+
+## 1. La vivacité était détachée du visage — CORRIGÉ PARTOUT, RESTE À METTRE EN SERVICE
+
+Le défaut était le même sur les deux parcours, et il était structurel : « le défi
+a réussi » et « le selfie correspond à la pièce » étaient deux faits établis
+séparément. Rien n'imposait qu'ils portent sur la même personne. Une personne
+pouvait jouer les actions devant la caméra pendant qu'un selfie de quelqu'un
+d'autre partait à la comparaison.
+
+Ce qui a changé, des deux côtés : la session de vivacité mémorise l'empreinte
+ArcFace du visage qui joue le défi (en mémoire du processus, jamais sur disque) ;
+un changement de visage en cours de défi détruit la session ; la comparaison
+faciale reçoit l'identifiant du défi et refuse un selfie qui n'est pas ce
+visage ; le tirage garantit au moins une action déformante, à position variable.
+
+**Reste à faire :**
+
+- **Mettre en service.** Parcours bot : redémarrer `face-verify` (8010) **avant**
+  le bot (8000) ; dans l'ordre inverse, tous les dossiers partent en revue
+  conseiller. Parcours Java : redéployer `python-service` et le backend.
+- Vérifier sur caméra réelle (exige HTTPS, `getUserMedia` refuse un contexte non
+  sécurisé) et **mesurer le taux de refus légitimes**. Le seuil de liaison est à
+  0,60, choisi par raisonnement et non par mesure : trop haut, il renvoie en
+  agence des clients honnêtes. C'est le premier chiffre à corriger avec de vraies
+  données.
+- Risque résiduel assumé : l'identité n'est contrôlée que sur 2 frames par
+  rafale, pour le coût de calcul. Intercaler un visage au milieu d'une rafale
+  reste théoriquement possible, mais il faudrait que le tirage papier substitué
+  cligne des yeux ou sourie.
+- Le service n'est plus sans état pendant un parcours : plusieurs réplicas
+  exigeraient une affinité de session, ou un stockage partagé.
+
+---
+
+## 2. Le contournement KYC a été retiré, et ne doit pas revenir
+
+`POST /onboarding/kyc/skip` et le bouton « Continuer sans e-mail (test) » ont été
+supprimés. La tentation de les réintroduire reviendra, donc voici le raisonnement
+en entier.
+
+Ils avaient été ajoutés « tant que l'envoi d'e-mail est en panne ». L'envoi
+n'était pas en panne : serveur, port et compte étaient corrects, seule la
+variable `MAIL_PASSWORD` n'était pas renseignée, ce qui faisait échouer le
+démarrage sur un paramètre non résolu. Les traces du serveur ne comptent **aucun
+appel** à cet endpoint : le contournement n'a jamais servi.
+
+Et il était plus grave qu'une étape sautée : le courriel porte les codes à usage
+unique et le lien de réinitialisation du PIN. Un compte activé sans adresse
+vérifiée n'offre à son titulaire aucun moyen de récupération.
+
+---
+
+## 3. Points ouverts
+
+- **Déployer `first-agent` à la place du backend actuel.** C'est le point
+  bloquant : tout ce qui précède est écrit et testé, rien n'est en service.
+- **Calibrer les seuils sur données réelles** : liaison de vivacité (0,60),
+  comparaison faciale (0,40), revue manuelle (70). Aucun n'a été mesuré.
+- **Modification d'un message WhatsApp par le client** : aucune déduplication sur
+  `message_id`, aucun traitement des événements d'édition. WhatsApp permet
+  l'édition, donc le cas se produira.
+- **Keycloak** : `postLogoutUris` ne contient pas
+  `https://backoffice.afb-firstagent.com/*`, d'où l'erreur « URI de redirection
+  invalide » à la déconnexion. Deux entrées obsolètes traînent également.
+- **Couverture frontend** vers 80 % (charte DSI), et registre Nexus interne
+  injoignable depuis le VPS.
 
 ---
 
@@ -146,14 +125,36 @@ rapprochement. C'est la décision la plus utile à prendre.
 100, plafonnant vers 80. Toute valeur au-dessus de 70 envoie la quasi-totalité
 des dossiers légitimes en agence.
 
+**Le seuil de liaison de vivacité n'est pas le seuil de comparaison faciale.**
+Comparer une photo de CNI imprimée à un selfie tolère un écart important (0,40).
+Comparer deux captures webcam prises à quelques secondes d'intervalle ne le
+tolère pas (0,60). Les confondre casse l'un ou l'autre.
+
+**`spring.profiles.active` est interdit dans un `application-<profil>.yml`.**
+Spring lève `InvalidConfigDataPropertyException` au démarrage. `application-prod.yml`
+était une copie de `application.yml` et contenait cette clé : démarrer en profil
+prod aurait échoué. Le défaut était invisible parce que le déploiement tourne sur
+le profil `dev`, ce qui est le vrai problème.
+
 **L'ordre des marqueurs de type de document compte.** Un titre provisoire et un
 récépissé portent tous deux « Carte Nationale d'Identité » dans leur champ
 « type de titre ». Les tester après le marqueur CNI les fait passer pour des
 cartes définitives. Trois tests documentent cette précédence.
 
+**Le backend réaffecte l'enregistrement OCR à partir de ce qu'il reçoit.**
+N'envoyer que les champs affichés à l'écran efface donc en base ceux qui ne le
+sont pas. Un formulaire doit conserver et renvoyer tous les champs, affichés ou
+non.
+
 **`curl` n'envoie pas d'en-tête `Origin`.** Un contrôle CORS ne se déclenche
 donc pas en ligne de commande : une vérification de mise en service peut être
 entièrement verte alors que le parcours est inutilisable dans un navigateur.
+
+**Il y a trois frontends, dans deux dépôts.** `first-agent/frontend` est Angular.
+`firstagent-frontend-afriland/` contient le back-office Angular, l'ancien
+onboarding Angular, et `onboarding-next/` qui est le **parcours client réellement
+servi**. Corriger un défaut du parcours client dans le mauvais dossier est une
+erreur facile : elle a été commise pendant cet audit.
 
 **Le Nexus interne est à `192.168.11.137:38081/repository/npm-proxy/`**,
 inscrit dans le `package-lock.json` du frontend. Il n'est pas joignable depuis
