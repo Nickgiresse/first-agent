@@ -66,6 +66,18 @@ class Settings(BaseSettings):
     # aucune paire réelle disponible pour calibrer pendant le développement.
     face_match_similarity_threshold: float = 0.4
 
+    # Seuil de RATTACHEMENT au visage du défi de vivacité, distinct du seuil ci-dessus et
+    # volontairement plus haut.
+    #
+    # Les deux questions ne sont pas la même. Comparer une photo de CNI (imprimée, ancienne,
+    # rephotographiée) à un selfie tolère un écart important : 0,4. Comparer deux captures
+    # webcam prises à quelques secondes d'intervalle, même caméra, même éclairage, ne le
+    # tolère pas : en dessous de 0,6, ce n'est plus la même personne.
+    #
+    # Trop haut, ce seuil renverrait en agence des clients légitimes : à mesurer sur le
+    # premier lot de parcours réels avant de le figer.
+    liveness_binding_similarity_threshold: float = 0.6
+
 
 @lru_cache
 def get_settings() -> Settings:

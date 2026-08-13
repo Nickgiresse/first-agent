@@ -5,35 +5,52 @@ redécouvrir ce qui a déjà été établi, ni à refaire les erreurs déjà fai
 
 ---
 
-## 1. La vivacité n'est liée à aucun visage — À TRAITER EN PREMIER
+## 1. La vivacité n'était liée à aucun visage — CORRIGÉ, RESTE À VÉRIFIER EN RÉEL
 
-**C'est une faille, pas une gêne, et elle est en production.**
+Le code est écrit et testé (13 tests dans `face-verify/tests/`, 13 dans
+`firstagent-demo/app/tests/test_kyc_liveness_binding.py`). **Il n'est pas
+encore en service** : les deux processus tournent toujours sur l'ancien code,
+voir « Mise en service » ci-dessous.
 
-Rien ne garantit que le visage qui réussit le défi de vivacité est celui qui
-est ensuite comparé à la pièce d'identité. Un fraudeur passe le défi avec son
-propre visage, puis soumet au KYC la photo d'un tiers.
+Ce qui a changé :
 
-Pire, dans `firstagent-demo/app/gateway/secure_routes.py:1503`, réussir le défi
-**désactive** le déclassement anti-photo :
+- `face-verify` mémorise l'empreinte ArcFace du visage qui joue le défi.
+  `/api/verify` et `/api/verify-video` acceptent `liveness_session_id` et
+  répondent un bloc `liveness` : le selfie soumis est-il bien ce visage ?
+  L'empreinte vit en mémoire, 30 min au plus, jamais sur disque.
+- Un **changement de visage en cours de défi** (une personne joue les actions,
+  une autre est présentée) renvoie `409 face_changed` et détruit la session.
+- Le bot refuse désormais un selfie qui n'est pas le visage du défi
+  (`face_mismatch` → `NO_MATCH`, trace d'audit d'usurpation).
+- **Le défi devient obligatoire** : sans vivacité liée, `KYC_LIVENESS_MODE`
+  décide — `review` (défaut, compte suspendu et conseiller), `strict` (refus),
+  `off` (comportement d'avant, à proscrire). Un selfie importé depuis la
+  pellicule ne peut donc plus activer un compte tout seul.
+- Le déclassement anti-photo ne dépend plus de la réussite du défi : réussir la
+  vivacité ne peut plus **affaiblir** la décision.
+- Chaque défi comporte au moins un clignement ou un sourire. Le tirage libre
+  donnait bien un défi exclusivement rotatif une fois sur cinq (4 combinaisons
+  sur 20), franchissable en pivotant un tirage papier.
 
-    if (selfie_is_video and decision == "MATCH" and not liveness_ok
-            and result.motion_score is not None and result.motion_score < 0.005):
+**Mise en service — l'ordre compte.** Redémarrer `face-verify` (8010) **avant**
+le bot (8000) : tant que le microservice répond sans bloc `liveness`, le bot ne
+présume rien et envoie **tous** les dossiers en revue conseiller. C'est sans
+danger, mais ingérable pour les conseillers si l'ordre est inversé.
 
-Réussir la vivacité affaiblit donc la décision au lieu de la renforcer.
+**Reste à faire sur ce chemin :**
 
-**Correction attendue.** Faire renvoyer par `face-verify` l'empreinte du visage
-validé pendant le défi, et exiger une similarité élevée avec le selfie soumis
-ensuite. Ne jamais persister cette empreinte : donnée biométrique, à garder en
-session mémoire avec une durée de vie courte, comme aujourd'hui.
-
-Deux autres points du même chemin :
-
-- Le défi n'est pas obligatoire côté serveur. Un selfie JPEG envoyé sans avoir
-  joué le défi ne subit aucun contrôle de vivacité : une photo imprimée
-  rephotographiée donne directement un appariement.
-- Environ un défi sur cinq ne tire que des actions de rotation, vraisemblablement
-  franchissables en pivotant une photo imprimée devant l'objectif. À mesurer
-  avant de conclure.
+- Vérifier le parcours complet sur caméra réelle (exige HTTPS : `getUserMedia`
+  ne fonctionne qu'en contexte sécurisé), et mesurer le taux de `REVIEW`
+  légitimes : si le seuil de liaison (0.60) est trop haut, les clients sont
+  renvoyés en agence pour rien.
+- Risque résiduel assumé : l'identité n'est contrôlée que sur 2 frames par
+  rafale (coût CPU). Mélanger deux visages *au milieu* d'une rafale reste
+  théoriquement possible — mais il faudrait que le tirage papier cligne des yeux.
+- Le service n'est plus sans état pendant un parcours (défis et empreintes en
+  mémoire du processus) : plusieurs réplicas exigeraient une affinité de session.
+- Le parcours Next.js/Java a sa **propre** vivacité (`python-service`, port 8001,
+  `/api/v1/liveness/...`), non touchée ici. La même liaison y manque
+  vraisemblablement : à auditer.
 
 ---
 
@@ -119,6 +136,7 @@ rapprochement. C'est la décision la plus utile à prendre.
 | Seuil facial mal calibré à 75 | `first-agent`, ramené à 55 |
 | Champ « Lieu de naissance » retiré | déployé |
 | CORS du sous-domaine | déployé, non commité en amont |
+| Vivacité liée au visage du selfie | `face-verify` + `firstagent-demo`, **non redémarré** |
 
 ---
 

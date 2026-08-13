@@ -1,5 +1,36 @@
+# Surcharges de production.
+#
+# Ce fichier était auparavant une copie mot pour mot de application.yml, et
+# redéclarait `spring.profiles.active`. Or Spring Boot interdit cette clé dans
+# une ressource spécifique à un profil : démarrer avec SPRING_PROFILES_ACTIVE=prod
+# aurait levé InvalidConfigDataPropertyException au lieu de démarrer. Le défaut
+# était resté invisible parce que rien n'active ce profil aujourd'hui, le
+# déploiement tournant sur `dev` — ce qui est en soi le problème à corriger.
+#
+# N'y figurent que les valeurs qui DOIVENT différer de application-dev.yml.
+# Tout le reste est hérité.
+
 spring:
-  application:
-    name: backend
-  profiles:
-    active: dev
+  datasource:
+    # Aucun repli : en production, une valeur par défaut silencieuse fait
+    # démarrer le service sur la mauvaise base au lieu de refuser de démarrer.
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    # Le journal de production ne doit pas porter les requêtes : elles exposent
+    # les données des clients dans les traces, que le masquage ne couvre pas.
+    show-sql: false
+    open-in-view: false
+
+# La documentation d'API n'a pas à être exposée en production : elle décrit la
+# surface d'attaque à qui la lit.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

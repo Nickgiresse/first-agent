@@ -73,10 +73,21 @@ public class PythonVisionClient {
     return post("/api/v1/face/analyze", body, new ParameterizedTypeReference<>() {});
   }
 
-  public FaceCompareResult compareFaces(byte[] source, byte[] target) {
+  /**
+   * Compare deux visages, et rattache la cible au défi de vivacité si {@code livenessSessionId} est
+   * fourni.
+   *
+   * <p>Sans cet identifiant, le microservice compare bien les deux images mais ne peut pas dire si
+   * la cible est la personne qui a joué le défi. Les deux preuves restent alors indépendantes, et
+   * rien n'interdit qu'elles portent sur deux individus différents.
+   */
+  public FaceCompareResult compareFaces(byte[] source, byte[] target, String livenessSessionId) {
     MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
     body.add("source", namedResource(source, "source.jpg"));
     body.add("target", namedResource(target, "target.jpg"));
+    if (livenessSessionId != null && !livenessSessionId.isBlank()) {
+      body.add("liveness_session_id", livenessSessionId);
+    }
     return post("/api/v1/verification/compare", body, new ParameterizedTypeReference<>() {});
   }
 

@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from app.api.deps import verify_internal_api_key
-from app.liveness.errors import ActionMismatchError, SessionExpiredError, SessionNotFoundError
+from app.liveness.errors import (
+    ActionMismatchError,
+    FaceChangedError,
+    SessionExpiredError,
+    SessionNotFoundError,
+)
 from app.models.liveness_models import ChallengeStartResponse, ChallengeStatusResponse, ChallengeVerifyResponse
 from app.services.liveness_service import get_status, start_challenge, verify_challenge
 from app.utils.image_io import InvalidImageError
@@ -28,6 +33,11 @@ async def verify(
     except SessionExpiredError as exc:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(exc)) from exc
     except ActionMismatchError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except FaceChangedError as exc:
+        # 409 comme l'incohérence d'action : l'état de la session est en conflit avec ce qui
+        # est présenté. La session a déjà été détruite côté service, le client doit repartir
+        # d'un /challenge/start.
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except InvalidImageError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc

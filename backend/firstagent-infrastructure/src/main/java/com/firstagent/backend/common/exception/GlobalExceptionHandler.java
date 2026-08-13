@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @Slf4j
 @RestControllerAdvice
@@ -77,6 +78,30 @@ public class GlobalExceptionHandler {
             .message("Le corps de la requête doit être un JSON valide")
             .build();
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+  }
+
+  /**
+   * Pièce trop lourde.
+   *
+   * <p>Sans ce traitement, Tomcat rejette la requête avant tout contrôleur et le client reçoit «
+   * Une erreur inattendue est survenue » par le gestionnaire générique : rien ne lui dit que sa
+   * photo est trop lourde, ni qu'il peut en reprendre une plus légère. Le parcours s'arrêtait donc
+   * à la première pièce d'identité, sur un message qui n'indiquait aucune issue.
+   *
+   * <p>413 et non 400 : la requête est bien formée, c'est sa taille qui est refusée. La distinction
+   * permet au frontend de proposer une reprise de photo plutôt qu'une correction de saisie.
+   */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+    log.warn("Téléversement refusé, taille dépassée : {}", ex.getMessage());
+
+    ErrorResponse error =
+        ErrorResponse.builder()
+            .success(false)
+            .errorCode("FILE_TOO_LARGE")
+            .message("Cette photo est trop lourde. Reprenez-la ou réduisez sa définition.")
+            .build();
+    return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(error);
   }
 
   @ExceptionHandler(Exception.class)

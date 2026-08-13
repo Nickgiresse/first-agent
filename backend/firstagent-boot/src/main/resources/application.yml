@@ -2,4 +2,23 @@ spring:
   application:
     name: backend
   profiles:
-    active: dev
+    # Repli de développement. En déploiement, SPRING_PROFILES_ACTIVE=prod prime.
+    # Cette clé n'a le droit de figurer QUE dans ce fichier : la déclarer dans un
+    # application-<profil>.yml fait échouer le démarrage depuis Spring Boot 2.4
+    # (InvalidConfigDataPropertyException). C'était le cas de application-prod.yml.
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Téléversement des pièces d'identité. Commun à tous les profils : la taille
+  # d'une photo ne dépend pas de l'environnement.
+  #
+  # Le défaut de Spring Boot est 1 Mo, ce qui rejette toute photo prise avec un
+  # téléphone (2 à 5 Mo). Le rejet a lieu dans Tomcat, AVANT le contrôleur, donc
+  # avant la validation métier qui autorise pourtant 5 Mo : l'écran annonçait
+  # « 5 Mo maximum » et le parcours cassait dès la première photo.
+  #
+  # max-request-size couvre la rafale d'images de vivacité, qui part en une
+  # seule requête multipart et pèse donc bien plus qu'une pièce isolée.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
