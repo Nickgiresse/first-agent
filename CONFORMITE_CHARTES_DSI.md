@@ -241,6 +241,35 @@ la transaction au moment du rejet, si bien qu'il repartait de zéro à chaque
 essai. La limite de cinq tentatives n'était jamais atteinte et les six
 chiffres du code pouvaient être parcourus sans limite.
 
+**Le défi de vivacité était détaché du visage comparé.** Le parcours exigeait
+deux preuves, « le défi a réussi » et « le selfie correspond à la pièce », sans
+jamais vérifier qu'elles portaient sur la même personne. Une personne pouvait
+jouer les actions devant la caméra pendant qu'un selfie de quelqu'un d'autre
+partait à la comparaison. La session de vivacité mémorise désormais l'empreinte
+du visage qui joue le défi, un changement de visage en cours de défi détruit la
+session, et un selfie qui n'est pas ce visage est refusé. Le tirage garantit en
+outre au moins une action déformante : sans cela, un défi sur cinq était
+exclusivement rotatif, donc franchissable en pivotant une photo imprimée.
+
+**Le démarrage en profil de production échouait.** `application-prod.yml` était
+une copie mot pour mot de `application.yml` et redéclarait
+`spring.profiles.active`, clé que Spring interdit dans une ressource spécifique
+à un profil. Le défaut était resté invisible parce que le déploiement tourne sur
+le profil `dev`, ce qui est le vrai manquement : la configuration de production
+doit exister et différer de celle de développement.
+
+**Téléversement des pièces.** Limite portée à 10 Mo par fichier et 30 Mo par
+requête, et dépassement traduit en 413 `FILE_TOO_LARGE`. Le défaut de Spring est
+1 Mo, appliqué par Tomcat avant tout contrôleur, donc avant la validation métier
+qui annonçait pourtant 5 Mo au client : le parcours cassait dès la première
+photo prise au téléphone, sur un message qui n'indiquait aucune issue.
+
+**Convergence des deux backends.** L'écart avec le backend déployé a été
+inventorié endpoint par endpoint et migration par migration. Un seul endpoint
+manquait ici, `POST /onboarding/kyc/skip`, écarté délibérément : il activait un
+compte sans adresse vérifiée, donc sans moyen de récupérer le code PIN, et les
+traces du serveur n'en comptent aucun appel.
+
 ### Reste à faire, par ordre de dépendance
 
 1. **Extraction du contenu métier** vers `domain`, `application` et `commons`.
