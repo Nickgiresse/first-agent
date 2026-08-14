@@ -137,22 +137,46 @@ exclut. Le fichier `/app/data/.backup_key` a été retiré, mais seulement aprè
 avoir vérifié qu'une archive antérieure se déchiffrait toujours : l'inverse
 aurait rendu toutes les archives illisibles sur une valeur mal recopiée.
 
-### Ce qui reste, et qui ne se règle pas depuis cette machine
+### Les sauvegardes existent désormais sur une seconde machine
 
-**Tout est sur le même disque.** Les archives (`/opt/backups/firstagent/`), la
-clé Fernet (`/root/.firstagent-backup-key.retire-du-volume-20260813`) et la
-phrase de passe du dump (`/root/.firstagent-pgdump-pass`) vivent sur le serveur
-qu'elles sont censées protéger. La perte du disque emporte les sauvegardes ET
-de quoi les lire.
+Le serveur n'a **qu'un seul disque**, aucun montage réseau et aucun outil de
+réplication (`rclone`, `restic`, `borg`, `aws` : tous absents). Le MinIO qui y
+tourne est sur le même disque, donc sans effet sur une perte de disque. Il n'y
+avait pas de destination externe à configurer : il fallait en créer une.
 
-Il faut donc, et ce sont les deux seules actions qui manquent :
+Copie de secours en place sur le poste de travail,
+`Documents\firstagent-sauvegardes\` :
 
-1. copier les deux secrets dans un coffre, hors de cette machine ;
-2. répliquer `/opt/backups/firstagent/` vers une destination externe (le script
-   est prêt à recevoir un `rsync` supplémentaire, ou `BACKUP_DIR_SECONDARY` côté
-   module pour les seules pièces KYC).
+- `archives\db\` et `archives\kyc\`, rapatriées quotidiennement à 09h00 par la
+  tâche planifiée « FirstAgent - rapatriement des sauvegardes » ;
+- l'accès passe par une clé SSH dédiée, restreinte par **commande forcée** :
+  elle ne peut qu'émettre l'archive des sauvegardes. Vérifié en demandant
+  `cat /etc/shadow` : le serveur renvoie une archive tar, pas le fichier.
+  Volée, cette clé ne livre que des fichiers déjà chiffrés, et aucun shell ;
+- déchiffrement prouvé **hors serveur**, avec la seule copie locale.
 
-Tant que ce n'est pas fait, il y a une sauvegarde mais pas de plan de reprise.
+Deux pièges rencontrés là, et corrigés :
+
+- le `tar` de Git Bash prend `C:\...` pour un hôte distant. Le script annonçait
+  « OK » sans avoir rien extrait. Il appelle désormais `System32/tar.exe` par
+  son chemin complet et contrôle le code de retour ;
+- vérifier la fraîcheur par la date des fichiers ne marche pas : `tar` restitue
+  les dates d'origine. Le contrôle compare le nombre d'archives avant et après.
+
+### Ce qui reste, et que je ne peux pas faire à votre place
+
+**Les deux secrets sont encore en clair sur le poste**, dans
+`firstagent-sauvegardes\SECRETS-A-DEPLACER-DANS-UN-COFFRE\`. Ils y ont été
+déposés parce qu'ils n'existaient que sur le serveur : sans eux, la copie de
+secours n'aurait servi à rien. Ils sont volontairement **séparés des archives**,
+pour ne pas recréer ailleurs le défaut corrigé sur le serveur.
+
+Il reste à les ranger dans un gestionnaire de mots de passe puis à supprimer ce
+dossier. Un poste de travail n'est pas un coffre : c'est une étape.
+
+**Le `.env` du serveur n'est dans aucune sauvegarde**, volontairement (il porte
+les mots de passe de base et les clés d'API). Sans lui on restaure les données
+mais on ne redémarre pas le service : à prévoir dans le coffre également.
 
 ---
 
