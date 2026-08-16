@@ -3,6 +3,7 @@ package com.firstagent.backend.pin.service;
 import com.firstagent.backend.common.exception.AccountNotFoundException;
 import com.firstagent.backend.common.exception.BusinessException;
 import com.firstagent.backend.common.exception.InvalidPinException;
+import com.firstagent.backend.common.mail.CourrielAsynchrone;
 import com.firstagent.backend.onboarding.entity.Customer;
 import com.firstagent.backend.onboarding.repository.CustomerRepository;
 import com.firstagent.backend.pin.dto.PinResetConfirmRequest;
@@ -15,8 +16,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +29,7 @@ public class PinResetServiceImpl implements PinResetService {
   private final CustomerRepository customerRepository;
   private final PinResetTokenRepository pinResetTokenRepository;
   private final PinService pinService;
-  private final JavaMailSender mailSender;
+  private final CourrielAsynchrone courriel;
 
   @Override
   @Transactional
@@ -60,7 +59,13 @@ public class PinResetServiceImpl implements PinResetService {
             .build();
 
     pinResetTokenRepository.save(token);
-    sendResetEmail(customer.getEmail(), resetToken);
+    courriel.envoyer(
+        customer.getEmail(),
+        "Réinitialisation de votre PIN",
+        "Voici votre lien de réinitialisation (valable 15 minutes) : "
+            + "https://votre-app.com/forgot-pin/confirm?token="
+            + resetToken,
+        "réinitialisation du PIN");
 
     return PinResetResponse.builder()
         .emailSent(true)
@@ -94,17 +99,5 @@ public class PinResetServiceImpl implements PinResetService {
 
     token.setUsed(true);
     pinResetTokenRepository.save(token);
-  }
-
-  private void sendResetEmail(String email, String resetToken) {
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setFrom(fromAddress);
-    message.setTo(email);
-    message.setSubject("Réinitialisation de votre PIN");
-    message.setText(
-        "Voici votre lien de réinitialisation (valable 15 minutes) : "
-            + "https://votre-app.com/forgot-pin/confirm?token="
-            + resetToken);
-    mailSender.send(message);
   }
 }

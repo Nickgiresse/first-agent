@@ -3,6 +3,7 @@ package com.firstagent.backend.onboarding.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -20,6 +21,7 @@ import com.firstagent.backend.common.enums.LivenessStatus;
 import com.firstagent.backend.common.enums.OcrStatus;
 import com.firstagent.backend.common.enums.OnboardingStatus;
 import com.firstagent.backend.common.exception.BusinessException;
+import com.firstagent.backend.common.mail.CourrielAsynchrone;
 import com.firstagent.backend.document.entity.CustomerDocument;
 import com.firstagent.backend.document.entity.DocumentOcrResult;
 import com.firstagent.backend.document.entity.FaceVerificationResult;
@@ -61,7 +63,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,7 +75,7 @@ class OnboardingServiceImplTest {
   @Mock private CustomerRepository customerRepository;
   @Mock private PinService pinService;
   @Mock private PasswordEncoder passwordEncoder;
-  @Mock private JavaMailSender mailSender;
+  @Mock private CourrielAsynchrone courriel;
   @Mock private DocumentService documentService;
   @Mock private OcrService ocrService;
   @Mock private FaceVerificationService faceVerificationService;
@@ -105,7 +106,7 @@ class OnboardingServiceImplTest {
             customerRepository,
             pinService,
             passwordEncoder,
-            mailSender,
+            courriel,
             documentService,
             ocrService,
             faceVerificationService,
@@ -154,7 +155,7 @@ class OnboardingServiceImplTest {
     assertThat(saved.getEmailOtpCodeHash()).isEqualTo("hashed-code");
     assertThat(saved.getEmailOtpExpiresAt()).isAfter(LocalDateTime.now());
 
-    verify(mailSender).send(any(org.springframework.mail.SimpleMailMessage.class));
+    verify(courriel).envoyer(anyString(), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -167,7 +168,7 @@ class OnboardingServiceImplTest {
         .isInstanceOf(BusinessException.class)
         .hasMessageContaining("déjà utilisée");
 
-    verifyNoInteractions(mailSender);
+    verifyNoInteractions(courriel);
   }
 
   @Test
@@ -180,7 +181,7 @@ class OnboardingServiceImplTest {
         .isInstanceOf(BusinessException.class)
         .hasMessageContaining("patienter");
 
-    verifyNoInteractions(mailSender);
+    verifyNoInteractions(courriel);
   }
 
   @Test
@@ -307,10 +308,69 @@ class OnboardingServiceImplTest {
     assertThat(trace.getValue().typeEvenement()).isEqualTo(EvenementAudit.OTP_VERROUILLE);
   }
 
-  // Les deux tests du contournement /kyc/skip sont retirés avec la
-  // fonctionnalité : ils vérifiaient précisément qu'une session pouvait
-  // atteindre KYC_COMPLETED sans adresse e-mail, ce qui n'est plus un
-  // comportement recherché. L'envoi fonctionne, seule MAIL_PASSWORD manquait.
+  @Test
+  @DisplayName("sans adresse e-mail, l'étape KYC est franchie : l'adresse est facultative")
+  void skipEmailVerification_sansAdresse_franchitLEtape() {
+    // Une part des clients n'a pas d'adresse e-mail. Refuser de les faire
+    // avancer fermerait le parcours à ceux-là seuls, alors que l'adresse ne
+    // sert qu'au confort de récupération, jamais à l'identification.
+    OnboardingSession session = accountVerifiedSession();
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+    service.skipEmailVerification(sessionToken);
+
+    verify(onboardingSessionService).updateStatus(session, OnboardingStatus.KYC_COMPLETED);
+    assertThat(session.getEmail()).isNull();
+  }
+
+  @Test
+  @DisplayName("le franchissement sans adresse est journalisé")
+  void skipEmailVerification_estJournalise() {
+    // Un compte activé sans adresse n'a pas de canal de réinitialisation du
+    // code secret : son titulaire devra passer en agence. La conformité doit
+    // pouvoir dénombrer ces comptes sans relire les parcours un par un.
+    OnboardingSession session = accountVerifiedSession();
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+    service.skipEmailVerification(sessionToken);
+
+    ArgumentCaptor<JournalAudit.EcritureAudit> trace =
+        ArgumentCaptor.forClass(JournalAudit.EcritureAudit.class);
+    verify(journal).enregistrer(trace.capture());
+    assertThat(trace.getValue().typeEvenement()).isEqualTo(EvenementAudit.EMAIL_NON_VERIFIE);
+  }
+
+  @Test
+  @DisplayName("un code déjà envoyé ne survit pas au franchissement sans adresse")
+  void skipEmailVerification_apresUneDemandeDeCode_effaceLeCodeEnAttente() {
+    // Sinon une adresse en attente et un code encore valide resteraient
+    // attachés à une session que le client a justement choisi de mener sans
+    // adresse.
+    OnboardingSession session = accountVerifiedSession();
+    session.setPendingEmail("jean@example.com");
+    session.setEmailOtpCodeHash("hashed-code");
+    session.setEmailOtpExpiresAt(LocalDateTime.now().plusMinutes(5));
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+    service.skipEmailVerification(sessionToken);
+
+    assertThat(session.getPendingEmail()).isNull();
+    assertThat(session.getEmailOtpCodeHash()).isNull();
+    assertThat(session.getEmailOtpExpiresAt()).isNull();
+  }
+
+  @Test
+  @DisplayName("l'étape ne peut pas être franchie deux fois")
+  void skipEmailVerification_etapeDejaPassee_estRefusee() {
+    OnboardingSession session = accountVerifiedSession();
+    session.setStatus(OnboardingStatus.KYC_COMPLETED);
+    when(onboardingSessionService.getValidSession(sessionToken)).thenReturn(session);
+
+    assertThatThrownBy(() -> service.skipEmailVerification(sessionToken))
+        .isInstanceOf(BusinessException.class);
+
+    verify(onboardingSessionService, never()).updateStatus(any(), any());
+  }
 
   private static KycRequest kycRequest(String email) {
     KycRequest request = new KycRequest();

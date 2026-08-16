@@ -12,6 +12,7 @@ import com.firstagent.backend.common.enums.OnboardingStatus;
 import com.firstagent.backend.common.exception.BusinessException;
 import com.firstagent.backend.common.exception.InvalidPinException;
 import com.firstagent.backend.common.exception.TypeErreurMetier;
+import com.firstagent.backend.common.mail.CourrielAsynchrone;
 import com.firstagent.backend.document.entity.CustomerDocument;
 import com.firstagent.backend.document.entity.DocumentOcrResult;
 import com.firstagent.backend.document.entity.FaceVerificationResult;
@@ -55,8 +56,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -116,7 +115,7 @@ public class OnboardingServiceImpl implements OnboardingService {
   private final CustomerRepository customerRepository;
   private final PinService pinService;
   private final PasswordEncoder passwordEncoder;
-  private final JavaMailSender mailSender;
+  private final CourrielAsynchrone courriel;
   private final DocumentService documentService;
   private final OcrService ocrService;
   private final FaceVerificationService faceVerificationService;
@@ -167,7 +166,15 @@ public class OnboardingServiceImpl implements OnboardingService {
     session.setEmailOtpLastSentAt(LocalDateTime.now());
     onboardingSessionRepository.save(session);
 
-    sendOtpEmail(request.getEmail(), code);
+    courriel.envoyer(
+        request.getEmail(),
+        "Votre code de vérification Afriland First Bank",
+        "Votre code de vérification est : "
+            + code
+            + "\n\nCe code est valable "
+            + OTP_VALIDITY_MINUTES
+            + " minutes. Ne le partagez avec personne.",
+        "code de vérification");
   }
 
   /**
@@ -242,23 +249,49 @@ public class OnboardingServiceImpl implements OnboardingService {
     onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
   }
 
+  /**
+   * Franchit l'étape KYC sans adresse e-mail.
+   *
+   * <p>L'adresse est facultative : une part des clients n'en possède pas, et le parcours ne peut
+   * pas s'arrêter là. La session passe en {@code KYC_COMPLETED} sans e-mail enregistré.
+   *
+   * <p>Le geste est journalisé. Ce n'est pas un échec, mais il laisse le compte sans canal de
+   * réinitialisation du code secret : le titulaire devra passer en agence, ce que la
+   * réinitialisation renvoie déjà (voir PinResetServiceImpl, {@code requiresBranchVisit}). La
+   * conformité doit pouvoir dénombrer ces comptes.
+   */
+  @Override
+  @Transactional
+  public void skipEmailVerification(String sessionToken) {
+    OnboardingSession session = onboardingSessionService.getValidSession(sessionToken);
+
+    if (session.getStatus() != OnboardingStatus.ACCOUNT_VERIFIED) {
+      throw new BusinessException("Étape KYC déjà complétée ou non accessible à ce stade");
+    }
+
+    // Une demande de code a pu précéder : sans ce nettoyage, un code encore
+    // valide et une adresse en attente survivraient à une étape que le client a
+    // justement choisi de franchir sans adresse.
+    session.setPendingEmail(null);
+    session.setEmailOtpCodeHash(null);
+    session.setEmailOtpExpiresAt(null);
+    session.setEmailOtpAttempts(0);
+    session.setEmailOtpLastSentAt(null);
+
+    onboardingSessionService.updateStatus(session, OnboardingStatus.KYC_COMPLETED);
+
+    journal.enregistrer(
+        JournalAudit.EcritureAudit.succes(
+            session.getPhoneNumber(),
+            EvenementAudit.EMAIL_NON_VERIFIE,
+            session.identifiantActeur(),
+            TypeActeur.CLIENT,
+            "Étape KYC franchie sans adresse e-mail (adresse facultative)"));
+  }
+
   private String generateOtpCode() {
     int bound = (int) Math.pow(10, OTP_LENGTH);
     return String.format("%0" + OTP_LENGTH + "d", OTP_RANDOM.nextInt(bound));
-  }
-
-  private void sendOtpEmail(String email, String code) {
-    SimpleMailMessage message = new SimpleMailMessage();
-    message.setFrom(fromAddress);
-    message.setTo(email);
-    message.setSubject("Votre code de vérification Afriland First Bank");
-    message.setText(
-        "Votre code de vérification est : "
-            + code
-            + "\n\nCe code est valable "
-            + OTP_VALIDITY_MINUTES
-            + " minutes. Ne le partagez avec personne.");
-    mailSender.send(message);
   }
 
   @Override
@@ -380,13 +413,24 @@ public class OnboardingServiceImpl implements OnboardingService {
                     new BusinessException(
                         "Le défi de vivacité doit être réussi avant la finalisation"));
 
+    // Le dossier doit être COMPLET (pièces, champs confirmés, défi de vivacité
+    // réussi) — mais la comparaison faciale, elle, ne conditionne plus la
+    // finalisation : un écart y est le plus souvent dû à la photo de la pièce,
+    // pas à une usurpation. Le défi de vivacité reste bloquant, car son échec
+    // signale une présentation non vivante, ce qui est un signal de fraude et
+    // non une limite de mesure.
     if (stagingDocuments.size() < REQUIRED_DOCUMENT_COUNT
         || stagingOcr.getStatus() != OcrStatus.CONFIRMED
-        || stagingFace.getStatus() != FaceVerificationStatus.VERIFIED
         || stagingLiveness.getStatus() != LivenessStatus.LIVE) {
       throw new BusinessException(
           "Le dossier n'est pas complet, impossible de finaliser l'inscription");
     }
+
+    // Identité non confirmée par la biométrie : le compte sera créé mais restera
+    // INACTIF jusqu'à vérification en agence. On ne laisse jamais un service
+    // bancaire s'ouvrir sur une identité incertaine.
+    boolean verificationEnAgenceRequise =
+        stagingFace.getStatus() != FaceVerificationStatus.VERIFIED;
 
     Customer customer =
         Customer.builder()
@@ -489,11 +533,23 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     onboardingSessionService.updateStatus(session, OnboardingStatus.COMPLETED);
 
-    String message =
-        customer.isRequiresManualReview()
-            ? "Votre compte a été enregistré. La qualité de vos documents nécessite une vérification "
-                + "complémentaire par notre agence avant activation complète."
-            : "Votre compte digital a été créé avec succès. Vous pouvez maintenant vous connecter.";
+    // Trois issues distinctes, et le message doit dire laquelle : promettre un
+    // service utilisable alors que le compte est inactif ferait revenir le
+    // client pour rien.
+    String message;
+    if (verificationEnAgenceRequise) {
+      message =
+          "Votre dossier a bien été enregistré. Votre identité n'ayant pas pu être confirmée "
+              + "automatiquement, rendez-vous dans votre agence avec votre pièce d'identité "
+              + "pour activer le service. Votre compte bancaire, lui, reste utilisable normalement.";
+    } else if (customer.isRequiresManualReview()) {
+      message =
+          "Votre compte a été enregistré. La qualité de vos documents nécessite une vérification "
+              + "complémentaire par notre agence avant activation complète.";
+    } else {
+      message =
+          "Votre compte digital a été créé avec succès. Vous pouvez maintenant vous connecter.";
+    }
 
     return OnboardingCompletionResponse.builder()
         .customerId(customer.getId())
@@ -501,6 +557,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         .lastName(customer.getLastName())
         .message(message)
         .requiresManualReview(customer.isRequiresManualReview())
+        .branchVisitRequired(verificationEnAgenceRequise)
         .build();
   }
 
@@ -529,7 +586,14 @@ public class OnboardingServiceImpl implements OnboardingService {
           "Finalisation sans lien/PIN : push vers le WhatsApp banking ignoré (parcours interne).");
       return;
     }
-    String decision = customer.isRequiresManualReview() ? "REVIEW" : "MATCH";
+    // REVIEW dès que l'identité n'est pas confirmée — que ce soit la qualité des
+    // documents ou la comparaison faciale. Côté banque, REVIEW crée le compte
+    // mais le laisse SUSPENDU : c'est exactement l'attente d'une vérification en
+    // agence. Envoyer MATCH ici ouvrirait le service sur une identité incertaine.
+    boolean identiteNonConfirmee =
+        customer.isRequiresManualReview()
+            || stagingFace.getStatus() != FaceVerificationStatus.VERIFIED;
+    String decision = identiteNonConfirmee ? "REVIEW" : "MATCH";
     String name = (customer.getFirstName() + " " + customer.getLastName()).trim();
     String accountNumber = session.getBankAccount().getAccountNumber();
     String docType =
