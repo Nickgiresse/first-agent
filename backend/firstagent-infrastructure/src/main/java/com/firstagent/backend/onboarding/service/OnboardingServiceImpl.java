@@ -606,7 +606,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         accountNumber,
         request.getPin(),
         decision,
-        stagingFace.getSimilarityScore(),
+        versProportion(stagingFace.getSimilarityScore()),
         stagingOcr.getDocumentNumber(),
         docType,
         true,
@@ -631,6 +631,19 @@ public class OnboardingServiceImpl implements OnboardingService {
           "Archivage du dossier dans le back-office échoué (client créé malgré tout) : {}",
           e.getMessage());
     }
+  }
+
+  /**
+   * Convertit un score de correspondance faciale de l'échelle interne (0-100, cf. {@code
+   * PythonVisionFaceMatchProvider}) vers la proportion 0-1 attendue par le champ {@code
+   * accounts.kyc_score} du WhatsApp banking.
+   *
+   * <p>Sans cette conversion, le back-office — qui multiplie le champ par 100 pour l'afficher —
+   * montrait des scores tels que « 5419,0 % » pour une similarité de 0,5419. Les seuils internes de
+   * ce service restent en pourcentage : seule la valeur transmise change d'unité.
+   */
+  private static Double versProportion(Double scoreEnPourcentage) {
+    return scoreEnPourcentage == null ? null : scoreEnPourcentage / 100.0;
   }
 
   /** Relit une pièce du staging depuis le stockage ; tableau vide si absente ou illisible. */
